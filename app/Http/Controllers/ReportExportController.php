@@ -18,7 +18,7 @@ class ReportExportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canOpenExports($user), 403);
+        abort_unless($user->can('viewAny', AuditReportExport::class), 403);
 
         $filters = $request->validate([
             'status' => ['nullable', 'string', 'in:'.implode(',', array_keys(AuditReportExport::STATUSES))],
@@ -66,7 +66,7 @@ class ReportExportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canAccessExport($user, $export), 403);
+        abort_unless($user->can('download', $export), 403);
         abort_unless($export->status === 'completed' && $export->path, 409);
         abort_unless(Storage::disk('local')->exists($export->path), 404);
 
@@ -82,7 +82,7 @@ class ReportExportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canAccessExport($user, $export), 403);
+        abort_unless($user->can('retry', $export), 403);
         abort_unless($export->status === 'failed', 409);
 
         $export->update([
@@ -103,37 +103,8 @@ class ReportExportController extends Controller
     {
         return AuditReportExport::query()
             ->with(['audit.client', 'audit.location', 'queuedBy'])
-            ->when(! in_array($user->role, ['super_admin', 'global_admin'], true), function ($query) use ($user): void {
-                if ($user->role === 'sales') {
-                    $query->where('report_type', 'sales');
-
-                    return;
-                }
-
-                $query->whereHas('audit', fn ($query) => $query->where('lead_reviewer_id', $user->id));
-            });
-    }
-
-    private function canOpenExports(User $user): bool
-    {
-        return $user->active && in_array($user->role, ['super_admin', 'global_admin', 'technical_lead', 'sales'], true);
-    }
-
-    private function canAccessExport(User $user, AuditReportExport $export): bool
-    {
-        if (! $this->canOpenExports($user)) {
-            return false;
-        }
-
-        if (in_array($user->role, ['super_admin', 'global_admin'], true)) {
-            return true;
-        }
-
-        if ($user->role === 'sales') {
-            return $export->report_type === 'sales';
-        }
-
-        return $export->audit()->where('lead_reviewer_id', $user->id)->exists();
+            ->when(! $user->canManageAllAudits(), fn ($query) => $query
+                ->whereHas('audit', fn ($query) => $query->where('lead_reviewer_id', $user->id)));
     }
 
     private function filename(AuditReportExport $export): string

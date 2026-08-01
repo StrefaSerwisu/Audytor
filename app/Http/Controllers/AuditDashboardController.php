@@ -18,8 +18,6 @@ class AuditDashboardController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewDashboard($user), 403);
-
         $audits = $this->visibleAudits($user)
             ->with(['client', 'location', 'leadReviewer', 'publications', 'answers'])
             ->latest()
@@ -48,8 +46,6 @@ class AuditDashboardController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-
-        abort_unless($this->canViewDashboard($user), 403);
 
         $audits = $this->visibleAudits($user)
             ->with('answers')
@@ -91,21 +87,9 @@ class AuditDashboardController extends Controller
             ->when(! $this->canViewAllAudits($user), fn ($query) => $query->where('lead_reviewer_id', $user->id));
     }
 
-    private function canViewDashboard(User $user): bool
-    {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-            'technical_lead',
-        ], true);
-    }
-
     private function canViewAllAudits(User $user): bool
     {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-        ], true);
+        return $user->canManageAllAudits();
     }
 
     /**

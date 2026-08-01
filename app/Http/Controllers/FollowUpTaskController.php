@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\AuditFollowUpTask;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,7 @@ class FollowUpTaskController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canManageFollowUps($user), 403);
+        abort_unless($user->can('viewAny', AuditFollowUpTask::class), 403);
 
         $filters = $this->validatedFilters($request);
         $tasks = $this->filteredTasks($filters)->get();
@@ -28,7 +29,13 @@ class FollowUpTaskController extends Controller
             'priorities' => AuditFollowUpTask::PRIORITIES,
             'owners' => User::query()
                 ->where('active', true)
-                ->whereIn('role', ['super_admin', 'global_admin', 'technical_lead', 'auditor', 'sales'])
+                ->whereIn('role', [
+                    UserRole::SuperAdmin->value,
+                    UserRole::GlobalAdmin->value,
+                    UserRole::TechnicalLead->value,
+                    UserRole::Auditor->value,
+                    UserRole::Sales->value,
+                ])
                 ->orderBy('name')
                 ->get(),
         ]);
@@ -39,7 +46,7 @@ class FollowUpTaskController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canManageFollowUps($user), 403);
+        abort_unless($user->can('export', AuditFollowUpTask::class), 403);
 
         $filters = $this->validatedFilters($request);
         $rows = [[
@@ -82,7 +89,7 @@ class FollowUpTaskController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canManageFollowUps($user), 403);
+        abort_unless($user->can('update', $task), 403);
 
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:new,planned,in_progress,done,rejected'],
@@ -103,16 +110,6 @@ class FollowUpTaskController extends Controller
         ]);
 
         return back()->with('status', 'Zadanie follow-up zostalo zaktualizowane.');
-    }
-
-    private function canManageFollowUps(User $user): bool
-    {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-            'technical_lead',
-            'sales',
-        ], true);
     }
 
     /**

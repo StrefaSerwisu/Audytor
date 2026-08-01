@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class ClientPortalAuthController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if (! $user->active || $user->role !== 'client' || ! $user->client_id) {
+        if (! $user->active || ! $user->hasRole(UserRole::Client) || ! $user->client_id) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
