@@ -19,8 +19,6 @@ class AuditArchiveController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canManageArchive($user), 403);
-
         $filters = $this->validatedFilters($request);
         $audits = $this->filteredAudits($user, $filters)->get();
 
@@ -37,8 +35,6 @@ class AuditArchiveController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-
-        abort_unless($this->canManageArchive($user), 403);
 
         $filters = $this->validatedFilters($request);
         $rows = [[
@@ -80,7 +76,7 @@ class AuditArchiveController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canManageAudit($user, $audit), 403);
+        abort_unless($user->can('view', $audit), 403);
         abort_unless(in_array($audit->status, ['closed', 'cancelled'], true), 404);
 
         $audit->load([
@@ -106,7 +102,7 @@ class AuditArchiveController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canManageAudit($user, $audit), 403);
+        abort_unless($user->can('close', $audit), 403);
         abort_unless($audit->status === 'published_to_client', 409);
 
         $validated = $request->validate([
@@ -137,19 +133,6 @@ class AuditArchiveController extends Controller
             ->with('status', 'Audyt zostal zamkniety i przeniesiony do archiwum.');
     }
 
-    private function canManageAudit(User $user, Audit $audit): bool
-    {
-        if (! $this->canManageArchive($user)) {
-            return false;
-        }
-
-        if ($this->canManageAllAudits($user)) {
-            return true;
-        }
-
-        return $audit->lead_reviewer_id === $user->id;
-    }
-
     /**
      * @return array{q?: string, status?: string, client?: string, closed_from?: string, closed_to?: string}
      */
@@ -169,7 +152,7 @@ class AuditArchiveController extends Controller
         return Audit::query()
             ->with(['client', 'location', 'leadReviewer', 'publications', 'closures.closer'])
             ->whereIn('status', ['closed', 'cancelled'])
-            ->when(! $this->canManageAllAudits($user), fn ($query) => $query->where('lead_reviewer_id', $user->id))
+            ->when(! $user->canManageAllAudits(), fn ($query) => $query->where('lead_reviewer_id', $user->id))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['client'] ?? null, function ($query, $client): void {
                 $query->whereHas('client', fn ($clientQuery) => $clientQuery->where('name', 'like', "%{$client}%"));
@@ -206,23 +189,6 @@ class AuditArchiveController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
-    }
-
-    private function canManageArchive(User $user): bool
-    {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-            'technical_lead',
-        ], true);
-    }
-
-    private function canManageAllAudits(User $user): bool
-    {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-        ], true);
     }
 
     /**

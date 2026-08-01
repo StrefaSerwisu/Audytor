@@ -734,3 +734,106 @@ Pierwszy maly zakres Etapu 1 powinien obejmowac:
 4. Testy dostepu do panelu dla wszystkich docelowych rol.
 
 Nie zaczynac jeszcze typow audytow, kwalifikacji ani OpenAI przed uporzadkowaniem rol i autoryzacji.
+
+## 19. Etap 1A - wynik implementacji
+
+Data wykonania: 2026-08-01
+
+Branch: `refactor/security-foundation`
+
+Etap 1A domyka fundament autoryzacji i rol bez zmian w schemacie bazy danych oraz bez rozpoczynania User CRUD, audit log, MFA, SSO, Sales qualification, pricing, OpenAI, typow audytow ani raportow 2.0.
+
+### Zakres wykonany
+
+1. Dodano `App\Enums\UserRole` dla aktualnie istniejacych rol:
+   - `super_admin`
+   - `global_admin`
+   - `technical_lead`
+   - `auditor`
+   - `sales`
+   - `client`
+2. `User::role` jest castowany do `UserRole`, przy zachowaniu kompatybilnosci z obecna kolumna string w tabeli `users`.
+3. `User::canAccessPanel()` opiera sie na enumie i dopuszcza tylko:
+   - `super_admin`
+   - `global_admin`
+   - `technical_lead`
+4. Sales nie ma pelnego dostepu do panelu Filament.
+5. Dodano middleware `role`, ktory:
+   - przyjmuje jedna lub wiele rol,
+   - blokuje uzytkownikow nieaktywnych,
+   - zwraca `403` dla niedozwolonego dostepu.
+6. Zabezpieczono kluczowe sekcje routingu zgodnie z zakresem Etapu 1A:
+   - `/auditor`
+   - `/reviewer`
+   - `/dashboard`
+   - `/notifications`
+   - `/follow-ups`
+   - raporty techniczne, biznesowe i sales
+   - publikacja, zamykanie, kolejka eksportow i retry
+   - `/archive`
+   - `/client/portal`
+7. Publiczny link klienta `/client/reports/{token}` pozostawiono bez zmian.
+8. Dodano centralne Policies:
+   - `AuditPolicy`
+   - `AuditAnswerAttachmentPolicy`
+   - `AuditReportExportPolicy`
+   - `AuditPublicationPolicy`
+   - `AuditFollowUpTaskPolicy`
+9. Kontrolery korzystaja z policies tam, gdzie Etap 1A obejmowal autoryzacje dostepu:
+   - praca audytora,
+   - weryfikacja lidera,
+   - raporty,
+   - archiwum,
+   - eksporty raportow,
+   - portal klienta,
+   - follow-up.
+10. Zachowano dotychczasowe zachowanie portalu klienta:
+    - cudza publikacja zwraca `403`,
+    - wlasna wygasla publikacja jest ukryta jako `404`.
+11. Dodano testy feature w `tests/Feature/Authorization/RoleAuthorizationTest.php`, w tym:
+    - dostep rol zarzadzajacych do sekcji wewnetrznych,
+    - blokade Sales w panelu admina i raportach technicznych/biznesowych,
+    - izolacje audytora do przypisanych audytow,
+    - izolacje klienta do wlasnego portalu,
+    - blokade kont nieaktywnych,
+    - test IDOR dla zalacznikow,
+    - blokade pobierania technicznego eksportu przez Sales.
+
+### Wyniki walidacji Etapu 1A
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan test` | PASS: 81 testow, 367 asercji |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `php artisan migrate:status` | PASS po dopuszczeniu lokalnego PostgreSQL; wszystkie migracje `Ran` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+
+Znane ograniczenia srodowiska:
+
+- `php artisan migrate:status` wymaga dostepu do lokalnego PostgreSQL `127.0.0.1:5432` poza sandboxem narzedziowym.
+- Testy feature uzywaja SQLite in-memory i nie wymagaja lokalnego PostgreSQL.
+- Nie dodano migracji w Etapie 1A.
+- Nie dodano zewnetrznego pakietu permissions.
+- `node_modules`, `vendor`, `.env`, lokalne bazy testowe i assety builda pozostaja poza commitem.
+
+### Kryteria rozpoczecia Etapu 1B
+
+Etap 1B mozna rozpoczac dopiero po lacznym spelnieniu warunkow:
+
+1. Branch `refactor/security-foundation` jest wypchniety do GitHub.
+2. Repozytorium jest czyste po commicie/pushu Etapu 1A.
+3. Pelna walidacja Etapu 1A pozostaje zielona:
+   - `php artisan test`
+   - `./vendor/bin/pint --test`
+   - `composer validate`
+   - `php artisan migrate:status`
+   - `npm run build`
+4. Zakres Etapu 1B zostanie jawnie zatwierdzony przez wlasciciela projektu.
+5. Etap 1B powinien zaczac sie od kolejnego elementu fundamentu bezpieczenstwa, rekomendacyjnie:
+   - CRUD uzytkownikow w Filament,
+   - audit log,
+   - Form Requests,
+   - workflow/status actions.
+
+Nie rozpoczynac Etapu 2 ani funkcji biznesowych 2.0 przed zamknieciem calego Etapu 1.

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -53,6 +54,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
             'mfa_enabled' => 'boolean',
             'active' => 'boolean',
         ];
@@ -60,12 +62,27 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->active && in_array($this->role, [
-            'super_admin',
-            'global_admin',
-            'technical_lead',
-            'sales',
-        ], true);
+        return $this->active && $this->role->canAccessAdminPanel();
+    }
+
+    public function hasRole(UserRole $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    public function hasAnyRole(UserRole ...$roles): bool
+    {
+        return in_array($this->role, $roles, true);
+    }
+
+    public function canViewAllAudits(): bool
+    {
+        return $this->active && $this->hasAnyRole(UserRole::SuperAdmin, UserRole::GlobalAdmin, UserRole::TechnicalLead);
+    }
+
+    public function canManageAllAudits(): bool
+    {
+        return $this->active && $this->hasAnyRole(UserRole::SuperAdmin, UserRole::GlobalAdmin);
     }
 
     public function client(): BelongsTo

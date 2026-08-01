@@ -381,14 +381,16 @@
                     <a class="button secondary" href="{{ route('notifications.index') }}">
                         Powiadomienia{{ $unreadNotifications > 0 ? " ({$unreadNotifications})" : '' }}
                     </a>
-                    @if (auth()->user()->active && in_array(auth()->user()->role, ['super_admin', 'global_admin'], true))
+                    @if (auth()->user()->active && auth()->user()->role->canAccessAdminPanel())
                         <a class="button" href="{{ url('/admin') }}">Panel admina</a>
                     @endif
-                    @if (auth()->user()->active && in_array(auth()->user()->role, ['super_admin', 'global_admin', 'technical_lead'], true))
+                    @if (auth()->user()->active && auth()->user()->canViewAllAudits())
                         <a class="button secondary" href="{{ route('dashboard.index') }}">Dashboard</a>
                     @endif
-                    @if (auth()->user()->active && in_array(auth()->user()->role, ['super_admin', 'global_admin', 'technical_lead', 'sales'], true))
+                    @if (auth()->user()->active && auth()->user()->canViewAllAudits())
                         <a class="button secondary" href="{{ route('reports.exports.index') }}">Eksporty</a>
+                    @endif
+                    @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Sales))
                         <a class="button secondary" href="{{ route('follow-ups.index') }}">Follow-up</a>
                     @endif
                 @endauth

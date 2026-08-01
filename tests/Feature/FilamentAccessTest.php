@@ -15,20 +15,24 @@ class FilamentAccessTest extends TestCase
     {
         $panel = Panel::make()->id('admin');
 
-        foreach (['super_admin', 'global_admin', 'technical_lead', 'sales'] as $role) {
+        foreach (['super_admin', 'global_admin', 'technical_lead'] as $role) {
             $user = User::factory()->create(['role' => $role, 'active' => true]);
 
             $this->assertTrue($user->canAccessPanel($panel), "{$role} should access admin panel.");
         }
     }
 
-    public function test_auditor_and_inactive_users_cannot_access_filament_panel(): void
+    public function test_sales_auditor_client_and_inactive_users_cannot_access_filament_panel(): void
     {
         $panel = Panel::make()->id('admin');
+        $sales = User::factory()->create(['role' => 'sales', 'active' => true]);
         $auditor = User::factory()->create(['role' => 'auditor', 'active' => true]);
+        $client = User::factory()->create(['role' => 'client', 'active' => true]);
         $inactiveAdmin = User::factory()->create(['role' => 'global_admin', 'active' => false]);
 
+        $this->assertFalse($sales->canAccessPanel($panel));
         $this->assertFalse($auditor->canAccessPanel($panel));
+        $this->assertFalse($client->canAccessPanel($panel));
         $this->assertFalse($inactiveAdmin->canAccessPanel($panel));
     }
 }

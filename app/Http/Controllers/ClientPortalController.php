@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\AuditAnswer;
 use App\Models\AuditPublication;
 use App\Models\AuditQuestion;
@@ -18,8 +19,6 @@ class ClientPortalController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canUsePortal($user), 403);
-
         $publications = $this->visiblePublications($user)
             ->latest('published_at')
             ->get();
@@ -34,9 +33,17 @@ class ClientPortalController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canUsePortal($user), 403);
-        abort_unless($this->publicationBelongsToClient($publication, $user), 403);
-        abort_unless($this->publicationIsActive($publication), 404);
+        $publication->loadMissing('audit');
+
+        if (
+            $user->hasRole(UserRole::Client)
+            && $publication->audit?->client_id === $user->client_id
+            && ($publication->published_at === null || $publication->expires_at?->isPast())
+        ) {
+            abort(404);
+        }
+
+        abort_unless($user->can('view', $publication), 403);
 
         $publication->load([
             'publisher',
@@ -72,9 +79,7 @@ class ClientPortalController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canUsePortal($user), 403);
-        abort_unless($this->publicationBelongsToClient($publication, $user), 403);
-        abort_unless($this->publicationIsActive($publication), 404);
+        abort_unless($user->can('updateClientDecision', $publication), 403);
 
         $validated = $request->validate([
             'client_status' => ['required', 'string', 'in:received,to_discuss,accepted'],
@@ -93,9 +98,7 @@ class ClientPortalController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canUsePortal($user), 403);
-        abort_unless($this->publicationBelongsToClient($publication, $user), 403);
-        abort_unless($this->publicationIsActive($publication), 404);
+        abort_unless($user->can('updateClientDecision', $publication), 403);
 
         $validated = $request->validate([
             'client_comment' => ['nullable', 'string', 'max:5000'],
@@ -114,11 +117,6 @@ class ClientPortalController extends Controller
         return back()->with('status', 'Komentarz klienta zostal zapisany.');
     }
 
-    private function canUsePortal(User $user): bool
-    {
-        return $user->active && $user->role === 'client' && $user->client_id !== null;
-    }
-
     private function visiblePublications(User $user)
     {
         return AuditPublication::query()
@@ -132,19 +130,6 @@ class ClientPortalController extends Controller
                 'audit.location',
                 'audit.template',
             ]);
-    }
-
-    private function publicationBelongsToClient(AuditPublication $publication, User $user): bool
-    {
-        $publication->loadMissing('audit');
-
-        return $publication->audit?->client_id === $user->client_id;
-    }
-
-    private function publicationIsActive(AuditPublication $publication): bool
-    {
-        return $publication->published_at !== null
-            && ($publication->expires_at === null || $publication->expires_at->isFuture());
     }
 
     /**

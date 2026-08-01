@@ -17,12 +17,10 @@ class TechnicalReviewController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canReviewAudits($user), 403);
-
         $audits = Audit::query()
             ->with(['client', 'location', 'leadReviewer', 'answers'])
             ->whereIn('status', ['submitted_for_review', 'changes_requested', 'technically_approved', 'published_to_client'])
-            ->when(! $this->canReviewAllAudits($user), fn ($query) => $query->where('lead_reviewer_id', $user->id))
+            ->when(! $user->canManageAllAudits(), fn ($query) => $query->where('lead_reviewer_id', $user->id))
             ->latest('submitted_at')
             ->get();
 
@@ -36,7 +34,7 @@ class TechnicalReviewController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canReviewAudit($user, $audit), 403);
+        abort_unless($user->can('review', $audit), 403);
 
         $audit->load([
             'client',
@@ -65,7 +63,7 @@ class TechnicalReviewController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canReviewAudit($user, $audit), 403);
+        abort_unless($user->can('review', $audit), 403);
         $this->ensureSubmittedForReview($audit);
 
         $validated = $request->validate([
@@ -101,7 +99,7 @@ class TechnicalReviewController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canReviewAudit($user, $audit), 403);
+        abort_unless($user->can('review', $audit), 403);
         $this->ensureSubmittedForReview($audit);
 
         $validated = $request->validate([
@@ -135,35 +133,5 @@ class TechnicalReviewController extends Controller
     private function ensureSubmittedForReview(Audit $audit): void
     {
         abort_unless($audit->status === 'submitted_for_review', 409);
-    }
-
-    private function canReviewAudit(User $user, Audit $audit): bool
-    {
-        if (! $this->canReviewAudits($user)) {
-            return false;
-        }
-
-        if ($this->canReviewAllAudits($user)) {
-            return true;
-        }
-
-        return $audit->lead_reviewer_id === $user->id;
-    }
-
-    private function canReviewAudits(User $user): bool
-    {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-            'technical_lead',
-        ], true);
-    }
-
-    private function canReviewAllAudits(User $user): bool
-    {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-        ], true);
     }
 }

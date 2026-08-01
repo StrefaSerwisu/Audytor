@@ -25,7 +25,7 @@ class AuditorAuditController extends Controller
 
         $audits = Audit::query()
             ->with(['client', 'location', 'selectedModules.module.questions', 'answers.attachments'])
-            ->when(! $this->canViewAllAudits($user), fn ($query) => $query->whereHas(
+            ->when($user->cannot('viewAll', Audit::class), fn ($query) => $query->whereHas(
                 'assignees',
                 fn ($assignees) => $assignees->where('user_id', $user->id),
             ))
@@ -46,7 +46,7 @@ class AuditorAuditController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewAudit($user, $audit), 403);
+        abort_unless($user->can('view', $audit), 403);
 
         $audit->load([
             'client',
@@ -75,7 +75,7 @@ class AuditorAuditController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewAudit($user, $audit), 403);
+        abort_unless($user->can('update', $audit), 403);
         abort_unless($audit->modules()->whereKey($question->audit_module_id)->exists(), 404);
 
         $validated = $request->validate([
@@ -163,7 +163,7 @@ class AuditorAuditController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewAudit($user, $audit), 403);
+        abort_unless($user->can('submitForReview', $audit), 403);
 
         $audit->load([
             'answers.attachments',
@@ -205,8 +205,8 @@ class AuditorAuditController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewAudit($user, $audit), 403);
         abort_unless($attachment->audit_id === $audit->id, 404);
+        abort_unless($user->can('download', $attachment), 403);
         abort_unless(Storage::disk($attachment->disk)->exists($attachment->path), 404);
 
         return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
@@ -217,8 +217,8 @@ class AuditorAuditController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewAudit($user, $audit), 403);
         abort_unless($attachment->audit_id === $audit->id, 404);
+        abort_unless($user->can('delete', $attachment), 403);
 
         Storage::disk($attachment->disk)->delete($attachment->path);
 
@@ -233,26 +233,6 @@ class AuditorAuditController extends Controller
         }
 
         return back()->with('status', 'Zalacznik usuniety.');
-    }
-
-    private function canViewAudit(User $user, Audit $audit): bool
-    {
-        if ($this->canViewAllAudits($user)) {
-            return true;
-        }
-
-        return $audit->assignees()
-            ->where('user_id', $user->id)
-            ->exists();
-    }
-
-    private function canViewAllAudits(User $user): bool
-    {
-        return $user->active && in_array($user->role, [
-            'super_admin',
-            'global_admin',
-            'technical_lead',
-        ], true);
     }
 
     /**

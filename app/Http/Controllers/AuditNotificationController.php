@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\Audit;
 use App\Models\AuditNotification;
 use App\Models\User;
@@ -59,11 +60,11 @@ class AuditNotificationController extends Controller
      */
     private function remindersFor(User $user): array
     {
-        if (in_array($user->role, ['super_admin', 'global_admin', 'technical_lead'], true)) {
+        if ($user->hasAnyRole(UserRole::SuperAdmin, UserRole::GlobalAdmin, UserRole::TechnicalLead)) {
             return Audit::query()
                 ->with(['client', 'location'])
                 ->where('status', 'submitted_for_review')
-                ->when($user->role === 'technical_lead', fn ($query) => $query->where('lead_reviewer_id', $user->id))
+                ->when($user->hasRole(UserRole::TechnicalLead), fn ($query) => $query->where('lead_reviewer_id', $user->id))
                 ->latest('submitted_at')
                 ->limit(5)
                 ->get()

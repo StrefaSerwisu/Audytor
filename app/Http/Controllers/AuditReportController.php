@@ -26,7 +26,7 @@ class AuditReportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewReports($user, $audit), 403);
+        abort_unless($user->can('generateTechnicalReport', $audit), 403);
         $this->ensureReportable($audit);
 
         $audit = $this->loadReportAudit($audit);
@@ -44,7 +44,7 @@ class AuditReportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewReports($user, $audit), 403);
+        abort_unless($user->can('generateBusinessReport', $audit), 403);
         $this->ensureReportable($audit);
 
         $audit = $this->loadReportAudit($audit);
@@ -62,7 +62,7 @@ class AuditReportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canViewSalesReport($user, $audit), 403);
+        abort_unless($user->can('generateSalesReport', $audit), 403);
         $this->ensureReportable($audit);
 
         $audit = $this->loadReportAudit($audit);
@@ -90,7 +90,7 @@ class AuditReportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        abort_unless($this->canPublishReports($user, $audit), 403);
+        abort_unless($user->can('publish', $audit), 403);
         $this->ensurePublishable($audit);
 
         $validated = $request->validate([
@@ -215,56 +215,17 @@ class AuditReportController extends Controller
         abort_unless(in_array($type, ['technical', 'business', 'sales'], true), 404);
 
         if ($type === 'sales') {
-            abort_unless($this->canViewSalesReport($user, $audit), 403);
+            abort_unless($user->can('generateSalesReport', $audit), 403);
 
             return;
         }
 
-        abort_unless($this->canViewReports($user, $audit), 403);
+        abort_unless($user->can($type === 'technical' ? 'generateTechnicalReport' : 'generateBusinessReport', $audit), 403);
     }
 
     private function filename(Audit $audit, string $type, string $extension): string
     {
         return Str::slug($type.'-'.$audit->title).'.'.$extension;
-    }
-
-    private function canViewReports(User $user, Audit $audit): bool
-    {
-        if (! $user->active) {
-            return false;
-        }
-
-        if (in_array($user->role, ['super_admin', 'global_admin'], true)) {
-            return true;
-        }
-
-        return $user->role === 'technical_lead' && $audit->lead_reviewer_id === $user->id;
-    }
-
-    private function canPublishReports(User $user, Audit $audit): bool
-    {
-        if (! $user->active) {
-            return false;
-        }
-
-        if (in_array($user->role, ['super_admin', 'global_admin'], true)) {
-            return true;
-        }
-
-        return $user->role === 'technical_lead' && $audit->lead_reviewer_id === $user->id;
-    }
-
-    private function canViewSalesReport(User $user, Audit $audit): bool
-    {
-        if (! $user->active) {
-            return false;
-        }
-
-        if (in_array($user->role, ['super_admin', 'global_admin', 'sales'], true)) {
-            return true;
-        }
-
-        return $user->role === 'technical_lead' && $audit->lead_reviewer_id === $user->id;
     }
 
     /**
