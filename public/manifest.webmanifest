@@ -1,0 +1,33 @@
+{
+  "name": "Audytor IT",
+  "short_name": "Audytor IT",
+  "description": "Mobilne narzedzie Global IT do standaryzowanych audytow IT.",
+  "id": "/audytor-it",
+  "start_url": "/auditor",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f7fb",
+  "theme_color": "#102337",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/audytor-it-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Moje audyty",
+      "short_name": "Audyty",
+      "url": "/auditor"
+    },
+    {
+      "name": "Powiadomienia",
+      "short_name": "Alerty",
+      "url": "/notifications"
+    }
+  ]
+}

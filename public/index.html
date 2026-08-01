@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1f4f46">
+    <title>Audytor IT</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="stylesheet" href="./app.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Nawigacja">
+        <div class="brand">
+          <span class="brand-mark">AIT</span>
+          <div>
+            <strong>Audytor IT</strong>
+            <span>Global IT</span>
+          </div>
+        </div>
+        <nav>
+          <button class="nav-button active" data-view="dashboard">Dashboard</button>
+          <button class="nav-button" data-view="auditor">Widok audytora</button>
+          <button class="nav-button" data-view="templates">Szablony</button>
+          <button class="nav-button" data-view="reports">Raporty</button>
+        </nav>
+        <div class="sync-card">
+          <span class="status-dot" id="networkDot"></span>
+          <div>
+            <strong id="networkLabel">Online</strong>
+            <span id="syncLabel">Wszystko zsynchronizowane</span>
+          </div>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Silnik audytów IT</p>
+            <h1 id="viewTitle">Dashboard</h1>
+          </div>
+          <button id="syncNow" class="primary-button">Synchronizuj</button>
+        </header>
+
+        <section id="dashboard" class="view active-view">
+          <div class="metric-grid">
+            <article class="metric">
+              <span>Aktywne audyty</span>
+              <strong>6</strong>
+            </article>
+            <article class="metric">
+              <span>Do weryfikacji</span>
+              <strong>2</strong>
+            </article>
+            <article class="metric">
+              <span>Braki krytyczne</span>
+              <strong>4</strong>
+            </article>
+            <article class="metric">
+              <span>Pending sync</span>
+              <strong id="pendingCount">0</strong>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Audyty</h2>
+                <span>dzisiaj</span>
+              </div>
+              <div id="auditList" class="audit-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <h2>Ryzyka</h2>
+                <span>TOP</span>
+              </div>
+              <div class="risk-list">
+                <div><strong>Krytyczne</strong><span>Brak MFA dla administratorów M365</span></div>
+                <div><strong>Wysokie</strong><span>Panel UTM dostępny z WAN</span></div>
+                <div><strong>Średnie</strong><span>Brak aktualnego backupu konfiguracji</span></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="auditor" class="view">
+          <div class="auditor-layout">
+            <section class="panel audit-focus">
+              <div class="panel-heading">
+                <h2 id="auditTitle">Audyt podstawowy IT</h2>
+                <span id="auditStatus">W trakcie</span>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-meta">
+                  <span id="progressLabel">0% ukończenia</span>
+                  <span id="missingLabel">0 braków</span>
+                </div>
+                <div class="progress-bar"><span id="progressBar"></span></div>
+              </div>
+              <div id="moduleTabs" class="module-tabs"></div>
+              <div id="questionCard" class="question-card"></div>
+            </section>
+
+            <aside class="panel checklist-panel">
+              <div class="panel-heading">
+                <h2>Kroki</h2>
+                <span>UTM</span>
+              </div>
+              <div id="stepList" class="step-list"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="templates" class="view">
+          <div class="panel">
+            <div class="panel-heading">
+              <h2>Audyt podstawowy IT</h2>
+              <span>aktywny</span>
+            </div>
+            <div class="template-grid" id="templateGrid"></div>
+          </div>
+        </section>
+
+        <section id="reports" class="view">
+          <div class="report-grid">
+            <article class="report-card">
+              <span>Business</span>
+              <h2>Raport biznesowy</h2>
+              <p>Krótki raport dla zarządu klienta: wpływ na biznes, priorytety i plan działań.</p>
+              <button>Podgląd</button>
+            </article>
+            <article class="report-card">
+              <span>Technical</span>
+              <h2>Raport techniczny</h2>
+              <p>Szczegóły środowiska, dowody, ryzyka, rekomendacje i załączniki.</p>
+              <button>Podgląd</button>
+            </article>
+            <article class="report-card internal">
+              <span>Sales internal</span>
+              <h2>Raport sprzedażowy</h2>
+              <p>Potencjał usług Global IT, quick wins i sugerowane następne kroki dla opiekuna.</p>
+              <button>Podgląd</button>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
+
