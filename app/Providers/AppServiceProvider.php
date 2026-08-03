@@ -12,7 +12,9 @@ use App\Models\AuditReportExport;
 use App\Models\AuditType;
 use App\Models\AuditTypeModule;
 use App\Models\AuditTypeVersion;
+use App\Models\PricingRule;
 use App\Models\QualificationAttachment;
+use App\Models\Quotation;
 use App\Models\SalesQualification;
 use App\Models\SalesQualificationQuestion;
 use App\Models\User;
@@ -28,7 +30,9 @@ use App\Policies\AuditReportExportPolicy;
 use App\Policies\AuditTypeModulePolicy;
 use App\Policies\AuditTypePolicy;
 use App\Policies\AuditTypeVersionPolicy;
+use App\Policies\PricingRulePolicy;
 use App\Policies\QualificationAttachmentPolicy;
+use App\Policies\QuotationPolicy;
 use App\Policies\SalesQualificationPolicy;
 use App\Policies\SalesQualificationQuestionPolicy;
 use App\Policies\UserPolicy;
@@ -68,6 +72,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AuditControlDefinition::class, AuditControlDefinitionPolicy::class);
         Gate::policy(SalesQualification::class, SalesQualificationPolicy::class);
         Gate::policy(QualificationAttachment::class, QualificationAttachmentPolicy::class);
+        Gate::policy(PricingRule::class, PricingRulePolicy::class);
+        Gate::policy(Quotation::class, QuotationPolicy::class);
 
         User::observe(UserObserver::class);
         AuditType::observe(AuditLibraryObserver::class);

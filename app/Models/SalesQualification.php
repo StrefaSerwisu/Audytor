@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SalesQualification extends Model
 {
@@ -66,6 +67,16 @@ class SalesQualification extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(QualificationAttachment::class);
+    }
+
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class);
+    }
+
+    public function currentQuotation(): HasOne
+    {
+        return $this->hasOne(Quotation::class)->where('is_current', true);
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder

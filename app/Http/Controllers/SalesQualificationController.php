@@ -94,7 +94,7 @@ class SalesQualificationController extends Controller
     public function show(Request $request, SalesQualification $qualification): View
     {
         abort_unless($request->user()?->can('view', $qualification), 403);
-        $qualification->load(['client', 'location', 'auditType', 'version', 'salesOwner', 'answers.attachments']);
+        $qualification->load(['client', 'location', 'auditType', 'version', 'salesOwner', 'answers.attachments', 'currentQuotation']);
         $answers = $qualification->answers->keyBy('question_code');
         $values = $answers->mapWithKeys(fn (QualificationAnswer $answer): array => [
             $answer->question_code => $answer->value_json['value'] ?? null,
@@ -106,6 +106,7 @@ class SalesQualificationController extends Controller
             'visibleModules' => $this->conditions->visibleModules($qualification->qualification_snapshot, $values),
             'progress' => $this->completion->calculate($qualification),
             'canEdit' => $request->user()?->can('update', $qualification) ?? false,
+            'canCreateQuotation' => $request->user()?->can('createQuotation', $qualification) ?? false,
         ]);
     }
 

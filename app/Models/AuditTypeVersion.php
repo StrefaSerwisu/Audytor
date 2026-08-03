@@ -13,6 +13,15 @@ use Illuminate\Validation\ValidationException;
 
 class AuditTypeVersion extends Model
 {
+    protected $attributes = [
+        'minimum_hours' => '0.00',
+        'minimum_price' => '0.00',
+        'reserve_percent' => '0.00',
+        'default_engineers_count' => 1,
+        'default_tax_rate' => '23.00',
+        'default_validity_days' => 14,
+    ];
+
     public const STATUS_DRAFT = 'draft';
 
     public const STATUS_PUBLISHED = 'published';
@@ -38,6 +47,13 @@ class AuditTypeVersion extends Model
         'estimated_execution_minutes',
         'estimated_reporting_minutes',
         'estimated_review_minutes',
+        'default_hourly_rate',
+        'minimum_hours',
+        'minimum_price',
+        'reserve_percent',
+        'default_engineers_count',
+        'default_tax_rate',
+        'default_validity_days',
         'ai_enabled',
         'ai_configuration',
         'published_at',
@@ -48,6 +64,11 @@ class AuditTypeVersion extends Model
     {
         return [
             'minimum_competency_level' => CompetencyLevel::class,
+            'default_hourly_rate' => 'decimal:2',
+            'minimum_hours' => 'decimal:2',
+            'minimum_price' => 'decimal:2',
+            'reserve_percent' => 'decimal:2',
+            'default_tax_rate' => 'decimal:2',
             'ai_enabled' => 'boolean',
             'ai_configuration' => 'array',
             'published_at' => 'datetime',
@@ -88,6 +109,11 @@ class AuditTypeVersion extends Model
     public function publisher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'published_by');
+    }
+
+    public function pricingRules(): HasMany
+    {
+        return $this->hasMany(PricingRule::class)->orderBy('sort_order');
     }
 
     public function isDraft(): bool
@@ -148,7 +174,7 @@ class AuditTypeVersion extends Model
     /** @return array<string, mixed> */
     public function snapshot(): array
     {
-        $this->loadMissing(['modules.salesQuestions', 'modules.controlDefinitions']);
+        $this->loadMissing(['modules.salesQuestions', 'modules.controlDefinitions', 'pricingRules']);
 
         $version = $this->only([
             'id',
@@ -164,6 +190,13 @@ class AuditTypeVersion extends Model
             'estimated_execution_minutes',
             'estimated_reporting_minutes',
             'estimated_review_minutes',
+            'default_hourly_rate',
+            'minimum_hours',
+            'minimum_price',
+            'reserve_percent',
+            'default_engineers_count',
+            'default_tax_rate',
+            'default_validity_days',
             'ai_enabled',
             'ai_configuration',
             'published_at',
@@ -183,6 +216,7 @@ class AuditTypeVersion extends Model
                 ->values()
                 ->map(fn (AuditTypeModule $module): array => $module->snapshot(includeControlDefinitions: true))
                 ->all(),
+            'pricing_rules' => $this->pricingRules->where('active', true)->values()->map->snapshot()->all(),
         ];
     }
 }

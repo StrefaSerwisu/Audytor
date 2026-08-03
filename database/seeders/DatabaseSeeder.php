@@ -630,5 +630,7 @@ class DatabaseSeeder extends Seeder
                 ['role_in_audit' => $assignee['role_in_audit']],
             );
         }
+
+        $this->call(DemoPricingRulesSeeder::class);
     }
 }

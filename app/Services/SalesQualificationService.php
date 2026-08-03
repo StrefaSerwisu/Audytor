@@ -40,6 +40,7 @@ class SalesQualificationService
             'version' => $versionSnapshot['version'],
             'sales_instructions' => $version->sales_instructions,
             'sales_modules' => $versionSnapshot['sales_modules'],
+            'pricing_rules' => $versionSnapshot['pricing_rules'],
         ];
         $salesOwnerId = $actor->hasRole(UserRole::Sales) ? $actor->id : ($data['sales_owner_id'] ?? null);
 

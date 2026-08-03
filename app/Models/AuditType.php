@@ -57,6 +57,11 @@ class AuditType extends Model
         return $this->belongsTo(AuditTypeVersion::class, 'current_version_id');
     }
 
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

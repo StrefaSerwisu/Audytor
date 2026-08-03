@@ -40,7 +40,6 @@
                 @elseif($qualification->status === \App\Enums\SalesQualificationStatus::WaitingForClient)
                     <form method="post" action="{{ route('sales.qualifications.resume', $qualification) }}">@csrf<button type="submit">Wznow</button></form>
                 @endif
-                <button type="button" disabled title="Dostepne w Etapie 2C">Przejdz do wyceny - Etap 2C</button>
             </div>
             @if(in_array($qualification->status, [\App\Enums\SalesQualificationStatus::Draft, \App\Enums\SalesQualificationStatus::InProgress, \App\Enums\SalesQualificationStatus::WaitingForClient], true))
                 <form method="post" action="{{ route('sales.qualifications.cancel', $qualification) }}" class="grid">
@@ -49,6 +48,28 @@
                     <button type="submit" style="align-self:end;">Anuluj</button>
                 </form>
             @endif
+        </section>
+    @endif
+
+    @if($qualification->status === \App\Enums\SalesQualificationStatus::ReadyForPricing)
+        <section class="card" style="margin-bottom:18px;">
+            <div class="page-head" style="margin-bottom:0;">
+                <div class="stack">
+                    <h2>Wycena audytu</h2>
+                    <p class="muted" style="margin:0;">Kwalifikacja jest kompletna i moze zostac przeliczona wedlug regul zapisanych w wersji audytu.</p>
+                </div>
+                <div class="meta">
+                    @if($qualification->currentQuotation)
+                        <a class="button secondary" href="{{ route('sales.quotations.show', $qualification->currentQuotation) }}">Otworz {{ $qualification->currentQuotation->number }}</a>
+                    @endif
+                    @if($canCreateQuotation)
+                        <form method="post" action="{{ route('sales.qualifications.quotation.store', $qualification) }}">
+                            @csrf
+                            <button type="submit">{{ $qualification->currentQuotation ? 'Utworz nowa wersje wyceny' : 'Oblicz wycene' }}</button>
+                        </form>
+                    @endif
+                </div>
+            </div>
         </section>
     @endif
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\ClientPortalController;
 use App\Http\Controllers\ClientReportController;
 use App\Http\Controllers\FollowUpTaskController;
 use App\Http\Controllers\QualificationAttachmentController;
+use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\SalesQualificationController;
 use App\Http\Controllers\TechnicalReviewController;
@@ -124,8 +125,25 @@ Route::middleware('auth')->prefix('sales/qualifications')->name('sales.qualifica
         Route::post('/{qualification}/resume', [SalesQualificationController::class, 'resume'])->name('resume');
         Route::post('/{qualification}/complete', [SalesQualificationController::class, 'complete'])->name('complete');
         Route::post('/{qualification}/cancel', [SalesQualificationController::class, 'cancel'])->name('cancel');
+        Route::post('/{qualification}/quotation', [QuotationController::class, 'store'])->name('quotation.store');
         Route::get('/attachments/{attachment}/download', [QualificationAttachmentController::class, 'download'])->name('attachments.download');
         Route::delete('/attachments/{attachment}', [QualificationAttachmentController::class, 'destroy'])->name('attachments.destroy');
+    });
+
+Route::middleware('auth')->prefix('sales/quotations')->name('sales.quotations.')
+    ->middleware('role:sales,technical_lead,global_admin,super_admin')
+    ->group(function () {
+        Route::get('/', [QuotationController::class, 'index'])->name('index');
+        Route::get('/{quotation}', [QuotationController::class, 'show'])->name('show');
+        Route::patch('/{quotation}/override', [QuotationController::class, 'override'])->name('override');
+        Route::post('/{quotation}/review', [QuotationController::class, 'review'])->name('review');
+        Route::post('/{quotation}/approve', [QuotationController::class, 'approve'])->name('approve');
+        Route::post('/{quotation}/return', [QuotationController::class, 'returnForChanges'])->name('return');
+        Route::post('/{quotation}/send', [QuotationController::class, 'send'])->name('send');
+        Route::post('/{quotation}/accept', [QuotationController::class, 'accept'])->name('accept');
+        Route::post('/{quotation}/reject', [QuotationController::class, 'reject'])->name('reject');
+        Route::post('/{quotation}/expire', [QuotationController::class, 'expire'])->name('expire');
+        Route::post('/{quotation}/cancel', [QuotationController::class, 'cancel'])->name('cancel');
     });
 
 Route::middleware('auth')->prefix('client/portal')->name('client.portal.')

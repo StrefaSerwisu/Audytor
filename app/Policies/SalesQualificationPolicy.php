@@ -41,4 +41,10 @@ class SalesQualificationPolicy
         return $user->hasAnyRole(UserRole::GlobalAdmin, UserRole::SuperAdmin)
             || ($user->hasRole(UserRole::Sales) && $qualification->sales_owner_id === $user->id);
     }
+
+    public function createQuotation(User $user, SalesQualification $qualification): bool
+    {
+        return $user->active && ($user->hasAnyRole(UserRole::GlobalAdmin, UserRole::SuperAdmin)
+            || ($user->hasRole(UserRole::Sales) && $qualification->sales_owner_id === $user->id));
+    }
 }

@@ -64,6 +64,17 @@ class AuditTypeVersionResource extends Resource
                     TextInput::make('estimated_review_minutes')->label('Weryfikacja')->numeric()->minValue(0)->default(0)->required(),
                 ]),
             ]),
+            Section::make('Domyslne parametry wyceny')->schema([
+                Grid::make(4)->schema([
+                    TextInput::make('default_hourly_rate')->label('Stawka godzinowa PLN')->numeric()->minValue(0),
+                    TextInput::make('minimum_hours')->label('Minimum godzin')->numeric()->minValue(0)->default(0)->required(),
+                    TextInput::make('minimum_price')->label('Minimum ceny netto')->numeric()->minValue(0)->default(0)->required(),
+                    TextInput::make('reserve_percent')->label('Rezerwa %')->numeric()->minValue(0)->maxValue(100)->default(0)->required(),
+                    TextInput::make('default_engineers_count')->label('Liczba inzynierow')->numeric()->minValue(1)->default(1)->required(),
+                    TextInput::make('default_tax_rate')->label('VAT %')->numeric()->minValue(0)->default(23)->required(),
+                    TextInput::make('default_validity_days')->label('Waznosc dni')->numeric()->minValue(1)->default(14)->required(),
+                ]),
+            ]),
             Section::make('Przyszla analiza AI')->schema([
                 Toggle::make('ai_enabled')->label('AI wlaczone')->default(false),
                 KeyValue::make('ai_configuration')->label('Konfiguracja AI')->columnSpanFull(),

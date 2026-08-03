@@ -1037,7 +1037,7 @@ Audit log obejmuje utworzenie, start, oczekiwanie, wznowienie, zmiane odpowiedzi
 
 ### Ograniczenia Etapu 2B
 
-- Brak kalkulatora cen i modelu oferty; przycisk wyceny wskazuje Etap 2C i jest nieaktywny.
+- Kalkulator cen i model wyceny zostaly dodane w Etapie 2C.
 - Brak integracji kwalifikacji z `Audit`.
 - Brak autosave i Livewire; odpowiedzi sa zapisywane pojedynczym formularzem.
 - Brak AI, wysylki plikow do AI i automatycznego generowania zakresu przez model.
@@ -1052,3 +1052,86 @@ Audit log obejmuje utworzenie, start, oczekiwanie, wznowienie, zmiane odpowiedzi
 | `./vendor/bin/pint --test` | PASS |
 | `composer validate` | PASS: `composer.json is valid` |
 | `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+
+## 23. Etap 2C - silnik wyceny
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2C dodaje wersjonowane wyceny audytu tworzone z kwalifikacji `ready_for_pricing`. Nie tworzy jeszcze audytu technicznego, zamowienia ani dokumentu ofertowego.
+
+### Modele i migracje
+
+- `PricingRule` definiuje wersjonowana, niemodyfikowalna po publikacji regule przypisana do `AuditTypeVersion`.
+- `Quotation` przechowuje numer `AUD/RRRR/NNNN`, wersje wyceny, status, godziny, stawki, rabat, VAT, ceny i snapshot kalkulacji.
+- `QuotationLine` zapisuje kazda pozycje godzinowa lub cenowa wraz ze zrodlem, iloscia i kategoria.
+- `QuotationOverride` tworzy niezmienny dziennik kontrolowanych korekt wraz z uzytkownikiem i wymaganym powodem.
+- `QuotationStatus` definiuje statusy od `draft` i `calculated` do akceptacji, odrzucenia, wygasniecia albo anulowania.
+- Osobna tabela `quotation_sequences` zapewnia transakcyjnie bezpieczna numeracje roczna.
+- `AuditTypeVersion` otrzymal domyslna stawke, minima godzin i ceny, rezerwe, liczbe inzynierow, VAT i okres waznosci.
+
+### Reguly i snapshot
+
+Reguly obsluguja typy `always`, `answer_exists`, porownania odpowiedzi, `answer_contains` i `module_active`. Kalkulacja obsluguje stale godziny i ceny, wartosci na jednostke, laczne godziny i cene oraz procent godzin lub ceny.
+
+Ilosc moze pochodzic z `answer:{question_code}`, stalej, liczby lokalizacji albo liczby aktywnych modulow Sales. Reguly sa dodawane w Filament wylacznie do wersji roboczej i trafiaja do `AuditTypeVersion::snapshot()` oraz snapshotu kwalifikacji.
+
+### Kolejnosc kalkulacji
+
+`QuotationCalculationService` wykonuje operacje poza kontrolerem i korzysta z BCMath. Wszystkie godziny, stawki i ceny sa zaokraglane do dwoch miejsc bez uzywania `float`.
+
+1. Ocenia warunki regul i pobiera ilosci.
+2. Tworzy pozycje godzinowe oraz cenowe.
+3. Stosuje rezerwe i minimum godzin.
+4. Wycenia godziny wedlug stawki i dodaje pozycje cenowe.
+5. Stosuje minimum ceny i koszty dodatkowe.
+6. Oblicza rabat procentowy albo kwotowy.
+7. Oblicza VAT oraz kwote brutto.
+8. Zapisuje oryginalny `calculation_snapshot` i wynik koncowy.
+
+Nowa kalkulacja tej samej kwalifikacji tworzy kolejna wersje `Quotation` i oznacza poprzednia jako nieaktualna.
+
+### Korekty i akceptacja
+
+Sales moze korygowac wlasna wycene w statusie `calculated` albo `internal_review`. Global Admin i Super Admin moga korygowac wszystkie. Zmieniane moga byc stawka, liczba inzynierow, dodatkowe godziny i koszty, rabat, waznosc, zalozenia i wylaczenia. Kazda zmiana wymaga powodu, tworzy `QuotationOverride`, przelicza wynik oraz aktualizuje `final_calculation_snapshot` bez zmiany snapshotu oryginalnego.
+
+`QuotationWorkflowService` kontroluje przejscia w transakcji i z blokada rekordu:
+
+- `calculated -> internal_review` - Sales lub administrator,
+- `internal_review -> internally_approved` - Technical Lead lub administrator,
+- `internal_review -> calculated` - wymagany komentarz,
+- `internally_approved -> sent_to_client` - Sales owner lub administrator,
+- `sent_to_client -> accepted` - osoba akceptujaca, data i opcjonalny numer zamowienia,
+- `sent_to_client -> rejected` - wymagany powod,
+- `sent_to_client -> expired` - dopiero po `valid_until`,
+- aktywne statusy przed wysylka moga przejsc do `cancelled` z powodem.
+
+Technical Lead widzi wszystkie wyceny i moze je zatwierdzac, ale nie moze zmieniac cen. Auditor i Client nie maja dostepu.
+
+### Audit trail i dane demonstracyjne
+
+Audit log obejmuje utworzenie, kalkulacje, korekty, wyslanie do weryfikacji, cofniecie, akceptacje wewnetrzna, wyslanie klientowi, decyzje klienta, wygasniecie i anulowanie. Metadane zawieraja identyfikatory, statusy i podsumowanie kwotowe bez pelnych notatek klienta.
+
+Seeder tworzy demonstracyjny typ `AUD-DEMO-2C` z regułami: 4 h bazowe, 0,15 h na uzytkownika, 0,10 h na komputer, 1,5 h na serwer, 2 h na lokalizacje, 3 h raportu, 2 h weryfikacji, 15% rezerwy i minimum 12 h. Wartosc jest jawnie oznaczona jako demonstracyjna.
+
+### Ograniczenia Etapu 2C
+
+- Brak `AuditOrder` i automatycznego tworzenia audytu technicznego po akceptacji.
+- Brak PDF/DOCX oferty i podpisu elektronicznego.
+- Brak integracji CRM, ClickUp, poczty i OpenAI.
+- Akceptacja klienta jest rejestrowana przez uprawnionego pracownika, bez samoobslugi klienta.
+- Wewnetrzna akceptacja ma jeden krok; model dat i aktorow pozwala rozbudowac ja o osobne zatwierdzenie techniczne i finansowe.
+- Srodowisko PHP musi miec rozszerzenie `ext-bcmath`.
+- `composer audit` wskazuje cztery advisory o sredniej wadze dla istniejacego `guzzlehttp/guzzle <7.15.1`; aktualizacja zaleznosci wymaga osobnego zadania i regresji.
+
+### Wyniki walidacji Etapu 2C
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 39 migracji i seeder demonstracyjny 2C |
+| `php artisan test` | PASS: 151 testow, 681 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list --path=sales/quotations` | PASS: 11 tras wycen |

@@ -181,6 +181,31 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(QualificationAttachment::class, 'uploaded_by');
     }
 
+    public function ownedQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'sales_owner_id');
+    }
+
+    public function quotationOverrides(): HasMany
+    {
+        return $this->hasMany(QuotationOverride::class);
+    }
+
+    public function calculatedQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'calculated_by');
+    }
+
+    public function approvedQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'internally_approved_by');
+    }
+
+    public function sentQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'sent_by');
+    }
+
     public function hasHistoricalRelations(): bool
     {
         return collect([
@@ -201,6 +226,11 @@ class User extends Authenticatable implements FilamentUser
             'completedQualifications',
             'qualificationAnswers',
             'qualificationAttachments',
+            'ownedQuotations',
+            'quotationOverrides',
+            'calculatedQuotations',
+            'approvedQuotations',
+            'sentQuotations',
         ])->contains(fn (string $relation): bool => $this->{$relation}()->exists());
     }
 }

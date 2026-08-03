@@ -398,6 +398,7 @@
                     @endif
                     @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Sales))
                         <a class="button secondary" href="{{ route('sales.qualifications.index') }}">Kwalifikacje Sales</a>
+                        <a class="button secondary" href="{{ route('sales.quotations.index') }}">Wyceny</a>
                         <a class="button secondary" href="{{ route('follow-ups.index') }}">Follow-up</a>
                     @endif
                 @endauth
