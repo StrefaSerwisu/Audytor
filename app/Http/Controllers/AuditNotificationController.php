@@ -18,7 +18,7 @@ class AuditNotificationController extends Controller
         $user = $request->user();
 
         $notifications = $user->auditNotifications()
-            ->with(['audit.client', 'audit.location', 'auditOrder.client'])
+            ->with(['audit.client', 'audit.location', 'auditOrder.client', 'technicalAudit.client'])
             ->latest()
             ->limit(50)
             ->get();

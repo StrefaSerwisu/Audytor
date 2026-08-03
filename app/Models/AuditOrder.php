@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class AuditOrder extends Model
@@ -102,6 +103,11 @@ class AuditOrder extends Model
     public function notifications(): HasMany
     {
         return $this->hasMany(AuditNotification::class);
+    }
+
+    public function technicalAudit(): HasOne
+    {
+        return $this->hasOne(TechnicalAudit::class);
     }
 
     public function auditLogs(): MorphMany

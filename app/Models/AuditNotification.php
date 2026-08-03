@@ -14,6 +14,7 @@ class AuditNotification extends Model
         'user_id',
         'audit_id',
         'audit_order_id',
+        'technical_audit_id',
         'type',
         'title',
         'body',
@@ -41,5 +42,10 @@ class AuditNotification extends Model
     public function auditOrder(): BelongsTo
     {
         return $this->belongsTo(AuditOrder::class);
+    }
+
+    public function technicalAudit(): BelongsTo
+    {
+        return $this->belongsTo(TechnicalAudit::class);
     }
 }

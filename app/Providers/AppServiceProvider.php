@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\EvidenceScanner;
 use App\Models\Audit;
 use App\Models\AuditAnswerAttachment;
 use App\Models\AuditControlDefinition;
@@ -21,6 +22,12 @@ use App\Models\QualificationAttachment;
 use App\Models\Quotation;
 use App\Models\SalesQualification;
 use App\Models\SalesQualificationQuestion;
+use App\Models\TechnicalAudit;
+use App\Models\TechnicalAuditAnswer;
+use App\Models\TechnicalAuditControl;
+use App\Models\TechnicalAuditEscalation;
+use App\Models\TechnicalAuditEvidence;
+use App\Models\TechnicalAuditModule;
 use App\Models\User;
 use App\Observers\AuditLibraryObserver;
 use App\Observers\UserObserver;
@@ -43,7 +50,14 @@ use App\Policies\QualificationAttachmentPolicy;
 use App\Policies\QuotationPolicy;
 use App\Policies\SalesQualificationPolicy;
 use App\Policies\SalesQualificationQuestionPolicy;
+use App\Policies\TechnicalAuditAnswerPolicy;
+use App\Policies\TechnicalAuditControlPolicy;
+use App\Policies\TechnicalAuditEscalationPolicy;
+use App\Policies\TechnicalAuditEvidencePolicy;
+use App\Policies\TechnicalAuditModulePolicy;
+use App\Policies\TechnicalAuditPolicy;
 use App\Policies\UserPolicy;
+use App\Services\NullEvidenceScanner;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -58,7 +72,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(EvidenceScanner::class, NullEvidenceScanner::class);
     }
 
     /**
@@ -86,6 +100,12 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(QualificationAttachment::class, QualificationAttachmentPolicy::class);
         Gate::policy(PricingRule::class, PricingRulePolicy::class);
         Gate::policy(Quotation::class, QuotationPolicy::class);
+        Gate::policy(TechnicalAudit::class, TechnicalAuditPolicy::class);
+        Gate::policy(TechnicalAuditModule::class, TechnicalAuditModulePolicy::class);
+        Gate::policy(TechnicalAuditControl::class, TechnicalAuditControlPolicy::class);
+        Gate::policy(TechnicalAuditAnswer::class, TechnicalAuditAnswerPolicy::class);
+        Gate::policy(TechnicalAuditEvidence::class, TechnicalAuditEvidencePolicy::class);
+        Gate::policy(TechnicalAuditEscalation::class, TechnicalAuditEscalationPolicy::class);
 
         User::observe(UserObserver::class);
         AuditType::observe(AuditLibraryObserver::class);

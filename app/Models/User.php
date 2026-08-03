@@ -214,6 +214,26 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(AuditOrder::class, 'created_by');
     }
 
+    public function assignedTechnicalControls(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditControl::class, 'assigned_to');
+    }
+
+    public function technicalAuditAnswers(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditAnswer::class, 'answered_by');
+    }
+
+    public function technicalAuditEvidence(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditEvidence::class, 'uploaded_by');
+    }
+
+    public function createdTechnicalEscalations(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditEscalation::class, 'created_by');
+    }
+
     public function calculatedQuotations(): HasMany
     {
         return $this->hasMany(Quotation::class, 'calculated_by');
@@ -255,6 +275,7 @@ class User extends Authenticatable implements FilamentUser
             'approvedQuotations',
             'sentQuotations',
             'auditOrderAssignments', 'ownedAuditOrders', 'ledAuditOrders', 'createdAuditOrders',
+            'assignedTechnicalControls', 'technicalAuditAnswers', 'technicalAuditEvidence', 'createdTechnicalEscalations',
         ])->contains(fn (string $relation): bool => $this->{$relation}()->exists());
     }
 }

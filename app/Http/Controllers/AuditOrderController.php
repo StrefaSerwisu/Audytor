@@ -66,7 +66,7 @@ class AuditOrderController extends Controller
     public function show(Request $request, AuditOrder $auditOrder): View
     {
         abort_unless($request->user()->can('view', $auditOrder), 403);
-        $auditOrder->load(['client', 'location', 'auditType', 'versionDefinition', 'quotation', 'qualification', 'salesOwner', 'deliveryOwner', 'technicalLead', 'assignees.user', 'preparationItems', 'documents.uploader', 'auditLogs.actor']);
+        $auditOrder->load(['client', 'location', 'auditType', 'versionDefinition', 'quotation', 'qualification', 'salesOwner', 'deliveryOwner', 'technicalLead', 'assignees.user', 'preparationItems', 'documents.uploader', 'auditLogs.actor', 'technicalAudit']);
 
         return view('delivery.audit-orders.show', [
             'order' => $auditOrder, 'canPlan' => $request->user()->can('plan', $auditOrder),

@@ -10,11 +10,14 @@ use App\Http\Controllers\AuditReportController;
 use App\Http\Controllers\ClientPortalAuthController;
 use App\Http\Controllers\ClientPortalController;
 use App\Http\Controllers\ClientReportController;
+use App\Http\Controllers\EngineerAuditController;
 use App\Http\Controllers\FollowUpTaskController;
 use App\Http\Controllers\QualificationAttachmentController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\SalesQualificationController;
+use App\Http\Controllers\TechnicalAuditEscalationController;
+use App\Http\Controllers\TechnicalAuditReviewController;
 use App\Http\Controllers\TechnicalReviewController;
 use Illuminate\Support\Facades\Route;
 
@@ -162,6 +165,29 @@ Route::middleware('auth')->prefix('delivery/audit-orders')->name('delivery.audit
         Route::delete('/{auditOrder}/documents/{document}', [AuditOrderController::class, 'deleteDocument'])->name('documents.destroy');
         Route::post('/{auditOrder}/status/{status}', [AuditOrderController::class, 'transition'])->name('transition');
     });
+
+Route::middleware('auth')->prefix('engineer')->name('engineer.')->middleware('role:auditor,technical_lead,global_admin,super_admin')->group(function () {
+    Route::get('/audits', [EngineerAuditController::class, 'index'])->name('audits.index');
+    Route::get('/audits/{technicalAudit}', [EngineerAuditController::class, 'show'])->name('audits.show');
+    Route::get('/audits/{technicalAudit}/modules/{module}', [EngineerAuditController::class, 'module'])->name('modules.show');
+    Route::get('/audits/{technicalAudit}/controls/{control}', [EngineerAuditController::class, 'control'])->name('controls.show');
+    Route::patch('/audits/{technicalAudit}/controls/{control}/answer', [EngineerAuditController::class, 'answer'])->name('answers.update');
+    Route::post('/audits/{technicalAudit}/controls/{control}/status/{status}', [EngineerAuditController::class, 'controlStatus'])->name('controls.status');
+    Route::post('/audits/{technicalAudit}/controls/{control}/evidence', [EngineerAuditController::class, 'uploadEvidence'])->name('evidence.store');
+    Route::get('/audits/{technicalAudit}/evidence/{evidence}', [EngineerAuditController::class, 'downloadEvidence'])->name('evidence.download');
+    Route::delete('/audits/{technicalAudit}/evidence/{evidence}', [EngineerAuditController::class, 'deleteEvidence'])->name('evidence.destroy');
+    Route::post('/audits/{technicalAudit}/status/{status}', [EngineerAuditController::class, 'transition'])->name('audits.transition');
+    Route::get('/escalations', [TechnicalAuditEscalationController::class, 'index'])->name('escalations.index');
+    Route::post('/audits/{technicalAudit}/controls/{control}/escalations', [TechnicalAuditEscalationController::class, 'store'])->name('escalations.store');
+    Route::patch('/escalations/{escalation}', [TechnicalAuditEscalationController::class, 'respond'])->name('escalations.respond');
+});
+
+Route::middleware('auth')->prefix('technical-review')->name('technical-review.')->middleware('role:technical_lead,global_admin,super_admin')->group(function () {
+    Route::get('/audits', [TechnicalAuditReviewController::class, 'index'])->name('audits.index');
+    Route::get('/audits/{technicalAudit}', [TechnicalAuditReviewController::class, 'show'])->name('audits.show');
+    Route::patch('/audits/{technicalAudit}/controls/{control}', [TechnicalAuditReviewController::class, 'control'])->name('controls.update');
+    Route::post('/audits/{technicalAudit}/status/{status}', [TechnicalAuditReviewController::class, 'transition'])->name('audits.transition');
+});
 
 Route::middleware('auth')->prefix('client/portal')->name('client.portal.')
     ->middleware('role:client')

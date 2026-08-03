@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class AuditOrderWorkflowService
 {
+    public function __construct(private readonly TechnicalAuditCreationService $technicalAuditCreation) {}
+
     /** @param array<string, mixed> $data */
     public function transition(AuditOrder $order, AuditOrderStatus $target, User $actor, array $data = []): AuditOrder
     {
@@ -34,6 +36,11 @@ class AuditOrderWorkflowService
         }
         if ($target === AuditOrderStatus::Cancelled && blank($data['reason'] ?? null)) {
             throw ValidationException::withMessages(['reason' => 'Podaj powod anulowania.']);
+        }
+        if ($target === AuditOrderStatus::InProgress) {
+            $this->technicalAuditCreation->create($order, $actor);
+
+            return $order->refresh();
         }
 
         return DB::transaction(function () use ($order, $target, $actor, $data): AuditOrder {

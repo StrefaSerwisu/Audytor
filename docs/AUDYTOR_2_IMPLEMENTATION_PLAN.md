@@ -1191,3 +1191,63 @@ Przejscie do `ready` albo `scheduled` wymaga wlasciciela Delivery, lidera techni
 | `composer validate` | PASS: `composer.json is valid` |
 | `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
 | `php artisan route:list --path=delivery/audit-orders` | PASS: 10 tras Delivery |
+
+## 25. Etap 3A - techniczna realizacja audytu
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 3A dodaje prowadzony proces techniczny 2.0 pod `/engineer`, pozostawiajac stary model `Audit` i `/auditor` bez zmian. Przejscie zlecenia `scheduled -> in_progress` atomowo tworzy `TechnicalAudit` ze snapshotu zlecenia, a nie z aktualnego stanu biblioteki.
+
+### Modele i utworzenie audytu
+
+- `TechnicalAudit` przechowuje numer `AUD-TECH/RRRR/NNNN`, snapshoty, lidera, liczniki i status workflow.
+- `TechnicalAuditModule` oraz `TechnicalAuditControl` sa kopiami aktywnych modulow i kontroli ze snapshotu `AuditOrder`. Zachowuja kolejnosc, instrukcje, wymagania, kryteria i referencje standardow.
+- `TechnicalAuditAnswer` przechowuje typowana odpowiedz, wynik, komentarz, N/D, proponowane ryzyko i rekomendacje, deklaracje klienta oraz poziom pewnosci.
+- `TechnicalAuditEvidence` zapisuje prywatny plik i metadane. `EvidenceScanner` jest interfejsem dla przyszlego skanowania; obecny `NullEvidenceScanner` jawnie ustawia `not_scanned` i nie udaje ochrony antywirusowej.
+- `TechnicalAuditEscalation` obsluguje pytania, priorytety, przypisanie, odpowiedz i rozwiazanie przez lidera.
+- `TechnicalAuditCreationService` blokuje zlecenie w transakcji, generuje numer, kopiuje snapshot, rozdziela kontrole pomiedzy przypisanych inzynierow, aktualizuje zlecenie i wysyla powiadomienia. Unikalny `audit_order_id` oraz kontrola serwisu zapobiegaja duplikatom.
+
+### Praca inzyniera i kompletność
+
+`UpdateTechnicalAuditAnswerRequest` waliduje wartosc wedlug `field_type` zapisanego w kontroli. Zapis roboczy pozostawia kontrole `in_progress`. Zakonczenie wymaga wyniku, wymaganej odpowiedzi i dowodu, komentarza dla niezgodnosci albo braku weryfikacji, rekomendacji dla wysokiego lub krytycznego ryzyka oraz zrodla deklaracji klienta. N/D respektuje ustawienia snapshotu i wymagane uzasadnienie.
+
+`TechnicalAuditProgressService` po zmianie odpowiedzi, dowodu lub eskalacji przelicza postep kontroli, modulu i calego audytu. Nieaktywne kontrole nie sa liczone. Kontrole zablokowane, wymagajace konsultacji, bez wymaganych dowodow lub niekompletne blokuja wyslanie.
+
+Interfejs pokazuje zakres sprzedazowy, plan Delivery, zespol, instrukcje, kryteria, dowody, eskalacje, postep oraz przejscie do kolejnej lub kolejnej brakujacej kontroli.
+
+### Workflow i weryfikacja lidera
+
+`TechnicalAuditWorkflowService` kontroluje przejscia przez `in_progress`, `waiting_for_client`, `blocked`, `ready_for_submission`, `submitted_for_review`, `changes_requested`, `technically_approved` i `cancelled`. Gotowosc i zatwierdzenie wymagaja kompletnych kontroli, dowodow oraz braku blokad i otwartych krytycznych eskalacji.
+
+Kolejka `/technical-review/audits` udostepnia liderowi moduly, odpowiedzi, dowody, ryzyka, rekomendacje, deklaracje klienta i eskalacje. Lider moze zapisac korekte odpowiedzi, oznaczyc kontrole do poprawy, zwrocic caly audyt albo zatwierdzic go technicznie. Model `Finding` nie jest jeszcze tworzony.
+
+### Uprawnienia, audit trail i powiadomienia
+
+- Auditor widzi i edytuje tylko audyt przypisany przez zlecenie.
+- Technical Lead, Global Admin i Super Admin widza wszystkie audyty, eskalacje i weryfikacje.
+- Sales widzi tylko status i postep w karcie wlasnego zlecenia, bez dostepu do odpowiedzi, dowodow i komentarzy.
+- Client nie ma dostepu do procesu technicznego.
+- Audit trail obejmuje utworzenie, start, odpowiedzi, zakonczenie i blokady kontroli, dowody, eskalacje oraz wszystkie kluczowe przejscia audytu. Metadane nie zawieraja tresci plikow ani dlugich odpowiedzi.
+- Powiadomienia trafiaja do inzynierow po starcie, lidera po eskalacji i wyslaniu, audytora po odpowiedzi lub zwrocie oraz Sales i Delivery po zatwierdzeniu technicznym.
+
+### Ograniczenia Etapu 3A
+
+- Brak modelu `Finding`, finalnej analizy ryzyka i workflow 3B.
+- Brak OpenAI, nowych raportow, e-maili i portalu klienta 2.0.
+- Adapter antywirusowy jest przygotowany, ale pliki maja jawny status `not_scanned`.
+- Weryfikacja lidera zapisuje korekty w odpowiedzi technicznej; osobna historia recenzji kontroli moze zostac dodana wraz z Findings.
+- Stary `Audit` oraz wszystkie ekrany MVP dzialaja rownolegle i nie sa automatycznie migrowane.
+
+### Wyniki walidacji Etapu 3A
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 50 migracji i seeder demonstracyjny |
+| `php artisan test` | PASS: 176 testow, 779 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list --path=engineer` | PASS: 13 tras |
+| `php artisan route:list --path=technical-review` | PASS: 4 trasy |

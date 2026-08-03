@@ -404,6 +404,12 @@
                     @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Auditor, \App\Enums\UserRole::Sales))
                         <a class="button secondary" href="{{ route('delivery.audit-orders.index') }}">Zlecenia</a>
                     @endif
+                    @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Auditor))
+                        <a class="button secondary" href="{{ route('engineer.audits.index') }}">Audyty 2.0</a>
+                    @endif
+                    @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead))
+                        <a class="button secondary" href="{{ route('technical-review.audits.index') }}">Weryfikacja 2.0</a>
+                    @endif
                 @endauth
                 <div id="network" class="network">
                     <span class="network-dot"></span>
