@@ -5,13 +5,18 @@ namespace App\Providers;
 use App\Models\Audit;
 use App\Models\AuditAnswerAttachment;
 use App\Models\AuditFollowUpTask;
+use App\Models\AuditLog;
 use App\Models\AuditPublication;
 use App\Models\AuditReportExport;
+use App\Models\User;
+use App\Observers\UserObserver;
 use App\Policies\AuditAnswerAttachmentPolicy;
 use App\Policies\AuditFollowUpTaskPolicy;
+use App\Policies\AuditLogPolicy;
 use App\Policies\AuditPolicy;
 use App\Policies\AuditPublicationPolicy;
 use App\Policies\AuditReportExportPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -35,5 +40,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AuditReportExport::class, AuditReportExportPolicy::class);
         Gate::policy(AuditPublication::class, AuditPublicationPolicy::class);
         Gate::policy(AuditFollowUpTask::class, AuditFollowUpTaskPolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(AuditLog::class, AuditLogPolicy::class);
+
+        User::observe(UserObserver::class);
     }
 }

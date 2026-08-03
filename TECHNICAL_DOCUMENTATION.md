@@ -1,6 +1,6 @@
 # Audytor IT - technical documentation
 
-Aktualizacja analizy: 2026-08-01.
+Aktualizacja analizy: 2026-08-03.
 
 Dokument startowy do wznowienia prac: `PROJECT_RECOVERY_AUDIT.md`.
 
@@ -29,25 +29,27 @@ Projekt jest monolitem Laravel:
 - `database/seeders/DatabaseSeeder.php` tworzy dane testowe i startowa biblioteke audytu.
 - Support klasy w `app/Support` trzymaja logike pomocnicza: powiadomienia, dane raportow, follow-up, proste generatory PDF/DOCX.
 - Job `GenerateAuditReportExport` generuje pliki raportow w tle.
+- Policies i middleware rol centralizuja autoryzacje.
+- Form Requests trzymaja walidacje kluczowych akcji zapisu.
+- `AuditTrail` i `audit_logs` tworza centralny dziennik zmian i operacji.
 
 Nie ma oddzielnego API ani SPA. Mimo starej notatki w `docs/architecture.md`, projekt aktualnie nie uzywa Inertia ani Vue.
 
 ## Stan wskrzeszenia projektu
 
-Projekt jest funkcjonalnym MVP, ale przed dalszym rozwojem wymaga porzadkow organizacyjno-technicznych:
+Projekt jest funkcjonalnym MVP z domknietymi fundamentami rol, zarzadzania kontami i audit trailu. Przed Etapem 2 pozostaje:
 
-- ustalic baseline w Git, bo obecny `git status --short` pokazuje projekt jako praktycznie caly niezatwierdzony;
-- ponownie uruchomic testy i walidacje po dluzszej przerwie;
 - przejsc reczny scenariusz end-to-end;
-- dodac administracje uzytkownikami w Filament;
+- dodac centralny Enum i workflow przejsc statusow audytu;
 - dopracowac docelowe raporty PDF/DOCX;
 - zdecydowac, czy offline ma byc pelnym syncem czy tylko lokalnym draftem;
-- docelowo przeniesc role/autoryzacje do Policies i walidacje do Form Requests.
+- przygotowac polityke retencji audit logu i uniewaznianie sesji po dezaktywacji konta.
 
 ## Struktura katalogow
 
-- `app/Filament/Resources` - zasoby admina Filament: klienci, lokalizacje, szablony, moduly, pytania, rekomendacje, audyty.
+- `app/Filament/Resources` - zasoby admina Filament, w tym uzytkownicy i tylko do odczytu dziennik zdarzen.
 - `app/Http/Controllers` - kontrolery web workflow.
+- `app/Http/Requests` - walidacja wejscia dla kluczowych operacji zapisu.
 - `app/Jobs` - joby kolejkowe.
 - `app/Models` - encje Eloquent.
 - `app/Providers/Filament` - konfiguracja panelu admina.
@@ -74,6 +76,8 @@ Projekt jest funkcjonalnym MVP, ale przed dalszym rozwojem wymaga porzadkow orga
 - `app/Support/AuditReportData.php` - dane tekstowe do PDF/DOCX.
 - `app/Support/SimplePdf.php` i `app/Support/SimpleDocx.php` - minimalne generatory plikow.
 - `app/Support/FollowUpTaskBuilder.php` - tworzenie zadan follow-up z zaakceptowanych rekomendacji.
+- `app/Support/AuditTrail.php` - centralny zapis zdarzen wraz z aktorem, obiektem, zmianami, IP i user agentem.
+- `app/Observers/UserObserver.php` - audit zmian kont oraz zabezpieczenia roli Super Admin i wlasnego konta.
 - `database/seeders/DatabaseSeeder.php` - konta testowe, klient testowy, moduly, pytania, rekomendacje, audyt testowy.
 - `public/service-worker.js` i `public/offline-audit.js` - PWA/offline.
 
@@ -94,6 +98,7 @@ Glowne tabele:
 - `audit_notifications` - wewnetrzne powiadomienia.
 - `audit_follow_up_tasks` - plan dzialan poaudytowych.
 - `audit_report_exports` - kolejka/status wygenerowanych PDF/DOCX.
+- `audit_logs` - centralny audit trail z aktorem, zdarzeniem, obiektem, starymi/nowymi wartosciami i metadanymi zadania HTTP.
 - `jobs`, `failed_jobs`, `job_batches` - Laravel queue.
 
 Uwaga PostgreSQL: `recommendations.tags_json` jest `jsonb`, bo zwykly `json` powodowal problem z `select distinct recommendations.*` w Filament.

@@ -1,6 +1,6 @@
 # Audytor IT - features status
 
-Aktualizacja analizy: 2026-08-01.
+Aktualizacja analizy: 2026-08-03.
 
 Najpelniejszy aktualny dokument odzyskania projektu: `PROJECT_RECOVERY_AUDIT.md`.
 
@@ -13,17 +13,19 @@ Legenda:
 
 | Obszar | Status | Co jest gotowe | Czego brakuje / uwagi |
 | --- | --- | --- | --- |
-| Panel admina Filament | Dziala | CRUD klientow, lokalizacji, szablonow, modulow, pytan, rekomendacji i audytow. Menu pogrupowane biznesowo. | Brak osobnego CRUD uzytkownikow w Filament. |
-| Baseline Git | Brak | Repo istnieje lokalnie. | `git status --short` pokazuje praktycznie caly projekt jako niezatwierdzony (`??`). Trzeba ustalic pierwszy commit/branch przed wiekszym rozwojem. |
-| Role i dostep do admina | Dziala | `super_admin`, `global_admin`, `technical_lead`, `auditor`, `sales`, `client`; audytor i nieaktywny user nie wejda do Filament. | Brak rozbudowanych policies; autoryzacja czesto jest w kontrolerach. |
-| Administracja uzytkownikami | Brak | Konta testowe powstaja z seedera. | Brak `UserResource` w Filament do tworzenia uzytkownikow, zmiany rol, aktywnosci i przypisania klienta. |
+| Panel admina Filament | Dziala | CRUD klientow, lokalizacji, szablonow, modulow, pytan, rekomendacji, audytow i uzytkownikow. Menu pogrupowane biznesowo. | Wymaga UAT na docelowych kontach administracyjnych. |
+| Baseline Git | Dziala | Etap 1A zostal scalony do `main`; Etap 1B jest rozwijany na osobnej galezi. | Kazdy kolejny etap powinien przechodzic przez PR i walidacje. |
+| Role i dostep do admina | Dziala | Enum rol, middleware i Policies zabezpieczaja kluczowe sekcje; Sales nie ma dostepu do Filament. | Docelowe role 2.0 zostana rozszerzone w kolejnych etapach. |
+| Administracja uzytkownikami | Dziala | `UserResource` pozwala tworzyc i edytowac konta, role, aktywnosc i przypisanie klienta. Global Admin nie moze nadawac roli Super Admin, a uzytkownik nie moze zdezaktywowac wlasnego konta. | Produkcyjnie warto dodac reset hasla mailem i uniewaznianie aktywnych sesji po dezaktywacji. |
+| Centralny audit trail | Dziala | `audit_logs`, centralna usluga, dziennik Filament oraz logowanie zmian kont, dowodow i kluczowych akcji workflow. | Brak polityki retencji, eksportu i osobnego logu wejsc przez publiczny token klienta. |
+| Form Requests | Dziala | Kluczowe akcje zapisu korzystaja z dedykowanych klas walidacji. | Filtry list pozostaja walidowane lokalnie w kontrolerach. |
 | Klienci i lokalizacje | Dziala | Modele, migracje, relacje, CRUD, seed danych. | Brak importu/eksportu klientow. |
 | Biblioteka audytu | Dziala | Szablony, moduly, pytania, typy pol, wymagane dowody, N/D, ryzyko, rekomendacje. | Brak wersjonowania szablonow i pytan. |
 | Seeder biblioteki | Dziala | 5 modulow i pytania dla kazdego; testy pilnuja liczby pytan. | Dane sa demonstracyjne, wymagaja UAT merytorycznego. |
 | Tworzenie audytu | Dziala | Audyt, klient, lokalizacja, szablon, moduly, przypisani audytorzy, lider. | Brak workflow masowego tworzenia audytow. |
 | Widok audytora | Dziala | Lista audytow, szczegol, moduly, pytania, zapis odpowiedzi. | UI wymaga UAT na telefonie/tablecie. |
 | Walidacja odpowiedzi | Dziala | Wymagane pola, ryzyko, rekomendacja przy wysokim/krytycznym ryzyku, dowody. | Czesci typow pol z `AuditQuestion::FIELD_TYPES` moze nie miec pelnej dedykowanej kontrolki. |
-| Zalaczniki audytowe | Dziala | Upload, prywatny storage, pobieranie i usuwanie przez uprawnionych. | Brak skanowania antywirusowego, miniatur i limitow per audyt poza walidacja uploadu. |
+| Zalaczniki audytowe | Dziala | Upload, prywatny storage, autoryzowane pobieranie i usuwanie oraz audit trail tych operacji. | Brak skanowania antywirusowego, miniatur i limitow per audyt poza walidacja uploadu. |
 | Wysylka do weryfikacji | Dziala | Blokady kompletosci, status `submitted_for_review`, data wyslania. | Brak podpisu elektronicznego. |
 | Weryfikacja techniczna | Dziala | Lista, szczegol, akceptacja, zwrot do poprawek, historia decyzji. | Brak wieloetapowego approval chain. |
 | Powiadomienia | Dziala | DB notifications, licznik w UI, przypomnienia na ekranie. | Brak mail/push/websocket. |
@@ -41,8 +43,8 @@ Legenda:
 | PWA | Czesciowo dziala | Manifest, service worker, offline fallback, cache podstawowych adresow. | Brak pelnego testu install/offline na realnym urzadzeniu. |
 | Offline draft | Czesciowo dziala | Formularze audytora zapisuja draft do IndexedDB. | Brak pelnej synchronizacji draftow do backendu po online. |
 | CSV export | Dziala | Dashboard, archiwum, follow-up. | Brak XLSX. |
-| Testy automatyczne | Dziala | Feature tests pokrywaja glowne workflow; ostatnio 72 testy. | Brak testow browser/E2E i testow wizualnych. |
-| Build frontend | Do sprawdzenia | Vite config istnieje, package scripts istnieja. | Build nalezy uruchamiac po zmianach CSS/JS; frontend glownie Blade/Filament. |
+| Testy automatyczne | Dziala | Feature tests pokrywaja glowne workflow, role, User CRUD i audit trail; Etap 1B: 88 testow. | Brak stalego zestawu testow browser/E2E. |
+| Build frontend | Dziala | Vite build przechodzi; frontend to glownie Blade/Filament. | Build nalezy uruchamiac po zmianach CSS/JS. |
 | Produkcyjne wdrozenie | Czesciowo dziala | Checklisty w `docs`, migracje, queue, storage. | Brak supervisor/systemd config, backup planu, observability, HTTPS/domeny. |
 | Integracje zewnetrzne | Brak | Standardowa konfiguracja mail/log/storage/queue. | Brak integracji z ClickUp/CRM/email/S3/SSO/M365 Graph. |
 

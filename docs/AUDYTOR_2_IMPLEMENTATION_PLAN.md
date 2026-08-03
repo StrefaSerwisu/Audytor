@@ -837,3 +837,76 @@ Etap 1B mozna rozpoczac dopiero po lacznym spelnieniu warunkow:
    - workflow/status actions.
 
 Nie rozpoczynac Etapu 2 ani funkcji biznesowych 2.0 przed zamknieciem calego Etapu 1.
+
+## 20. Etap 1B - wynik implementacji
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie walidacji kluczowych akcji. Nie rozpoczeto Etapu 2 ani przebudowy workflow statusow.
+
+### Zakres wykonany
+
+1. Dodano `UserResource` w Filament:
+   - tworzenie i edycja kont,
+   - role z `UserRole`,
+   - aktywnosc konta,
+   - przypisanie konta klienta do firmy,
+   - wyszukiwanie i filtrowanie.
+2. Dodano `UserPolicy`:
+   - dostep do zarzadzania maja `super_admin` i `global_admin`,
+   - `global_admin` nie moze zarzadzac kontem ani rola `super_admin`,
+   - tylko `super_admin` moze usuwac inne konta.
+3. Dodano zabezpieczenia modelu konta:
+   - uzytkownik nie moze odebrac sobie roli ani zdezaktywowac wlasnego konta,
+   - `global_admin` nie moze nadac ani zmienic roli `super_admin`,
+   - przypisanie klienta jest automatycznie czyszczone dla rol wewnetrznych.
+4. Dodano centralny audit trail:
+   - migracja i model `AuditLog`,
+   - usluga `AuditTrail`,
+   - aktor, zdarzenie, obiekt, stare i nowe wartosci, metadane, IP, user agent i data,
+   - filtrowany, tylko do odczytu `AuditLogResource` w Filament,
+   - automatyczny audit zmian uzytkownikow przez `UserObserver`,
+   - redakcja pol wrazliwych w centralnej usludze.
+5. Rejestrowane sa m.in.:
+   - utworzenie, aktualizacja i usuniecie konta,
+   - pobranie i usuniecie dowodu,
+   - wyslanie audytu, akceptacja techniczna i zwrot do poprawek,
+   - publikacja, pobranie i eksport raportu,
+   - zamkniecie audytu,
+   - zmiana follow-upu,
+   - status i feedback klienta.
+6. Dodano Form Requests dla kluczowych operacji zapisu:
+   - logowanie,
+   - zapis odpowiedzi audytora i zalacznikow,
+   - akceptacja i zwrot audytu,
+   - publikacja i kolejka eksportu raportu,
+   - zamkniecie audytu,
+   - aktualizacja follow-upu,
+   - status i feedback klienta.
+7. Dodano testy dostepu, zabezpieczen kont oraz audit trailu dowodow i workflow.
+8. Recznie sprawdzono w Filament:
+   - menu `Bezpieczenstwo`,
+   - liste i formularz uzytkownikow,
+   - dziennik zdarzen,
+   - brak problemow z ukladem nowych ekranow.
+
+### Wyniki walidacji Etapu 1B
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan test` | PASS: 88 testow, 394 asercje |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `php artisan migrate:status` | PASS: wszystkie migracje `Ran`, `audit_logs` w batchu 9 |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+
+### Ograniczenia i dalszy zakres Etapu 1
+
+- Audit log nie ma jeszcze polityki retencji ani eksportu.
+- Dezaktywacja konta nie uniewaznia jeszcze wszystkich aktywnych sesji.
+- MFA pozostaje flaga danych; pelny mechanizm MFA i SSO jest poza Etapem 1B.
+- Filtry list pozostaja walidowane lokalnie w kontrolerach; operacje zapisu maja Form Requests.
+- Statusy audytu nadal sa stringami, a przejscia nie korzystaja jeszcze z centralnego workflow service.
+- Przed Etapem 2 nalezy domknac pozostala czesc Etapu 1: `AuditStatus`, centralne akcje przejsc statusow i testy dozwolonych przejsc.

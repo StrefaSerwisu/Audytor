@@ -1,15 +1,14 @@
 # Audytor IT - todo next steps
 
-Aktualizacja analizy: 2026-08-01.
+Aktualizacja analizy: 2026-08-03.
 
 Szczegolowy dokument wskrzeszenia projektu: `PROJECT_RECOVERY_AUDIT.md`.
 
 ## Priorytet P-1 - odzyskanie kontroli nad projektem
 
-1. Ustalic baseline w Git.
-   - `git status --short` pokazuje praktycznie caly projekt jako niezatwierdzony.
-   - Przed dalszym rozwojem trzeba zrobic pierwszy commit lub uzgodniony branch roboczy.
-   - Bez tego trudno bedzie odroznic stare zmiany, nowe zmiany i potencjalne regresje.
+1. Utrzymac workflow branch -> walidacja -> PR -> squash merge.
+   - Baseline istnieje, a Etap 1A jest scalony do `main`.
+   - Kazdy kolejny zakres powinien miec osobna galaz i jednoznaczne kryteria odbioru.
 
 2. Uruchomic pelna walidacje lokalna.
    - `php artisan test`
@@ -31,21 +30,21 @@ Szczegolowy dokument wskrzeszenia projektu: `PROJECT_RECOVERY_AUDIT.md`.
    - Raporty.
    - Portal klienta.
 
-5. Ustalic, czy `sales` ma miec dostep do Filament.
-   - Obecnie `User::canAccessPanel` wpuszcza role `sales`.
-   - Biznesowo trzeba zdecydowac, czy sales ma widziec admin panel, czy tylko raporty sales.
+5. Ustalic mapowanie obecnych rol na docelowe role 2.0.
+   - Sales nie ma dostepu do Filament i korzysta tylko z przypisanych sekcji operacyjnych.
+   - Przed Etapem 2 trzeba zdecydowac o `audit_product_admin`, `sales_manager`, `delivery_manager`, `client_admin` i `client_user`.
 
 ## Priorytet P0 - przed dalszym rozwojem produkcyjnym
 
-1. Dodac zarzadzanie uzytkownikami w panelu admina.
-   - `UserResource` w Filament.
-   - Pola: imie/nazwa, email, rola, klient dla roli `client`, aktywnosc, haslo/reset hasla.
-   - Filtry po roli i aktywnosci.
+1. Domknac centralny workflow statusow audytu.
+   - Dodac `AuditStatus` Enum.
+   - Zdefiniowac dozwolone przejscia i wykonywac je przez jedna usluge/action.
+   - Logowac przejscia i testowac odrzucenie niedozwolonych zmian.
 
-2. Uporzadkowac dostepy rol.
-   - Zdefiniowac docelowa macierz uprawnien.
-   - Przeniesc kluczowe sprawdzenia do Policies.
-   - Ograniczyc menu i akcje pod role.
+2. Domknac cykl zycia konta.
+   - Uniewazniac aktywne sesje po dezaktywacji.
+   - Dodac bezpieczny reset hasla.
+   - Przygotowac MFA/SSO jako osobny, zatwierdzony zakres.
 
 1. Przejsc UAT z Global IT na realnym scenariuszu audytu.
    - Sprawdzic, czy pytania w modulach sa merytorycznie kompletne.
@@ -110,9 +109,9 @@ Szczegolowy dokument wskrzeszenia projektu: `PROJECT_RECOVERY_AUDIT.md`.
    - XLSX/CSV dla pytan, rekomendacji i szablonow.
    - Przydatne dla szybkiego wdrozenia realnej biblioteki Global IT.
 
-3. CRUD uzytkownikow w adminie.
-   - Aktualnie konta testowe ida z seeda.
-   - Produkcyjnie potrzebne zarzadzanie uzytkownikami, aktywnoscia, rolami i klientami.
+3. Retencja i eksport audit logu.
+   - Ustalic okres przechowywania, dostep administracyjny i format eksportu.
+   - Dodac logowanie wejsc przez publiczny token raportu klienta.
 
 4. Integracje.
    - Email notifications.

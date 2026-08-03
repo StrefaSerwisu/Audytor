@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateAuditAnswerRequest;
 use App\Models\Audit;
 use App\Models\AuditAnswer;
 use App\Models\AuditAnswerAttachment;
 use App\Models\AuditQuestion;
 use App\Models\User;
 use App\Support\AuditNotifier;
+use App\Support\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -70,7 +72,7 @@ class AuditorAuditController extends Controller
         ]);
     }
 
-    public function updateAnswer(Request $request, Audit $audit, AuditQuestion $question): RedirectResponse
+    public function updateAnswer(UpdateAuditAnswerRequest $request, Audit $audit, AuditQuestion $question): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -78,17 +80,7 @@ class AuditorAuditController extends Controller
         abort_unless($user->can('update', $audit), 403);
         abort_unless($audit->modules()->whereKey($question->audit_module_id)->exists(), 404);
 
-        $validated = $request->validate([
-            'value' => ['nullable', 'string', 'max:5000'],
-            'comment' => ['nullable', 'string', 'max:5000'],
-            'not_applicable' => ['nullable', 'boolean'],
-            'not_applicable_reason' => ['nullable', 'string', 'max:5000'],
-            'risk_level' => ['nullable', 'in:low,medium,high,critical'],
-            'recommendation_text' => ['nullable', 'string', 'max:5000'],
-            'attachment_caption' => ['nullable', 'string', 'max:1000'],
-            'attachments' => ['nullable', 'array', 'max:6'],
-            'attachments.*' => ['file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf,txt,csv,doc,docx,xls,xlsx,zip'],
-        ]);
+        $validated = $request->validated();
 
         $notApplicable = (bool) ($validated['not_applicable'] ?? false);
         $riskLevel = $question->risk_enabled || $question->field_type === 'risk_level'
@@ -181,10 +173,19 @@ class AuditorAuditController extends Controller
                 ->with('submitBlockers', $blockers);
         }
 
+        $oldStatus = $audit->status;
+
         $audit->forceFill([
             'status' => 'submitted_for_review',
             'submitted_at' => now(),
         ])->save();
+
+        AuditTrail::record(
+            'audit.submitted_for_review',
+            $audit,
+            oldValues: ['status' => $oldStatus],
+            newValues: ['status' => $audit->status, 'submitted_at' => $audit->submitted_at],
+        );
 
         if ($audit->leadReviewer) {
             AuditNotifier::notify(
@@ -209,6 +210,11 @@ class AuditorAuditController extends Controller
         abort_unless($user->can('download', $attachment), 403);
         abort_unless(Storage::disk($attachment->disk)->exists($attachment->path), 404);
 
+        AuditTrail::record('evidence.downloaded', $attachment, metadata: [
+            'audit_id' => $audit->id,
+            'original_name' => $attachment->original_name,
+        ]);
+
         return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
     }
 
@@ -224,6 +230,14 @@ class AuditorAuditController extends Controller
 
         $answer = $attachment->answer;
         $question = $attachment->question;
+
+        AuditTrail::record('evidence.deleted', $attachment, oldValues: [
+            'audit_id' => $audit->id,
+            'original_name' => $attachment->original_name,
+            'mime_type' => $attachment->mime_type,
+            'size_bytes' => $attachment->size_bytes,
+        ]);
+
         $attachment->delete();
 
         if ($answer && $question) {

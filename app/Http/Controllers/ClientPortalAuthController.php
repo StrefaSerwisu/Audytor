@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,12 +17,9 @@ class ClientPortalAuthController extends Controller
         return view('client-portal.login');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(LoginRequest $request): RedirectResponse
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+        $credentials = $request->safe()->only(['email', 'password']);
 
         if (! Auth::attempt($credentials, (bool) $request->boolean('remember'))) {
             return back()

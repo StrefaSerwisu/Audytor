@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Requests\UpdateFollowUpTaskRequest;
 use App\Models\AuditFollowUpTask;
 use App\Models\User;
+use App\Support\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -84,21 +86,15 @@ class FollowUpTaskController extends Controller
         return $this->streamCsv('audytor-it-plan-wdrozen.csv', $rows);
     }
 
-    public function update(Request $request, AuditFollowUpTask $task): RedirectResponse
+    public function update(UpdateFollowUpTaskRequest $request, AuditFollowUpTask $task): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         abort_unless($user->can('update', $task), 403);
 
-        $validated = $request->validate([
-            'status' => ['required', 'string', 'in:new,planned,in_progress,done,rejected'],
-            'priority' => ['nullable', 'string', 'in:low,medium,high,critical'],
-            'owner_id' => ['nullable', 'exists:users,id'],
-            'due_date' => ['nullable', 'date'],
-            'notes' => ['nullable', 'string', 'max:5000'],
-            'client_visible' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validated();
+        $oldValues = $task->only(['status', 'priority', 'owner_id', 'due_date', 'notes', 'client_visible']);
 
         $task->update([
             'status' => $validated['status'],
@@ -108,6 +104,13 @@ class FollowUpTaskController extends Controller
             'notes' => $validated['notes'] ?? null,
             'client_visible' => (bool) ($validated['client_visible'] ?? false),
         ]);
+
+        AuditTrail::record(
+            'follow_up.updated',
+            $task,
+            oldValues: $oldValues,
+            newValues: $task->only(['status', 'priority', 'owner_id', 'due_date', 'notes', 'client_visible']),
+        );
 
         return back()->with('status', 'Zadanie follow-up zostalo zaktualizowane.');
     }

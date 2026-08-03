@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\GenerateAuditReportExport;
 use App\Models\AuditReportExport;
 use App\Models\User;
+use App\Support\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -70,6 +71,12 @@ class ReportExportController extends Controller
         abort_unless($export->status === 'completed' && $export->path, 409);
         abort_unless(Storage::disk('local')->exists($export->path), 404);
 
+        AuditTrail::record('report_export.downloaded', $export, metadata: [
+            'audit_id' => $export->audit_id,
+            'report_type' => $export->report_type,
+            'format' => $export->format,
+        ]);
+
         return Storage::disk('local')->download(
             $export->path,
             $this->filename($export),
@@ -91,6 +98,13 @@ class ReportExportController extends Controller
             'path' => null,
             'completed_at' => null,
         ]);
+
+        AuditTrail::record(
+            'report_export.retried',
+            $export,
+            oldValues: ['status' => 'failed'],
+            newValues: ['status' => $export->status],
+        );
 
         GenerateAuditReportExport::dispatch($export->id);
 
