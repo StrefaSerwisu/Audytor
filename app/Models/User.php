@@ -161,6 +161,26 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(AuditLog::class, 'actor_id');
     }
 
+    public function salesQualifications(): HasMany
+    {
+        return $this->hasMany(SalesQualification::class, 'sales_owner_id');
+    }
+
+    public function completedQualifications(): HasMany
+    {
+        return $this->hasMany(SalesQualification::class, 'completed_by');
+    }
+
+    public function qualificationAnswers(): HasMany
+    {
+        return $this->hasMany(QualificationAnswer::class, 'answered_by');
+    }
+
+    public function qualificationAttachments(): HasMany
+    {
+        return $this->hasMany(QualificationAttachment::class, 'uploaded_by');
+    }
+
     public function hasHistoricalRelations(): bool
     {
         return collect([
@@ -177,6 +197,10 @@ class User extends Authenticatable implements FilamentUser
             'ownedFollowUpTasks',
             'queuedReportExports',
             'auditLogs',
+            'salesQualifications',
+            'completedQualifications',
+            'qualificationAnswers',
+            'qualificationAttachments',
         ])->contains(fn (string $relation): bool => $this->{$relation}()->exists());
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\LoginRequest;
 use App\Models\User;
 use App\Support\AuditLogService;
@@ -38,7 +39,11 @@ class AuditorAuthController extends Controller
         $user = Auth::user();
         AuditLogService::record('auth.login_succeeded', $user, metadata: ['portal' => 'auditor']);
 
-        return redirect()->intended(route('auditor.index'));
+        $destination = $user->hasRole(UserRole::Sales)
+            ? route('sales.qualifications.index')
+            : route('auditor.index');
+
+        return redirect()->intended($destination);
     }
 
     public function destroy(Request $request): RedirectResponse

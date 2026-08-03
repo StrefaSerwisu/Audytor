@@ -10,7 +10,9 @@ use App\Http\Controllers\ClientPortalAuthController;
 use App\Http\Controllers\ClientPortalController;
 use App\Http\Controllers\ClientReportController;
 use App\Http\Controllers\FollowUpTaskController;
+use App\Http\Controllers\QualificationAttachmentController;
 use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\SalesQualificationController;
 use App\Http\Controllers\TechnicalReviewController;
 use Illuminate\Support\Facades\Route;
 
@@ -107,6 +109,23 @@ Route::middleware('auth')->prefix('archive')->name('archive.')
         Route::get('/', [AuditArchiveController::class, 'index'])->name('index');
         Route::get('/export', [AuditArchiveController::class, 'export'])->name('export');
         Route::get('/audits/{audit}', [AuditArchiveController::class, 'show'])->name('show');
+    });
+
+Route::middleware('auth')->prefix('sales/qualifications')->name('sales.qualifications.')
+    ->middleware('role:sales,technical_lead,global_admin,super_admin')
+    ->group(function () {
+        Route::get('/', [SalesQualificationController::class, 'index'])->name('index');
+        Route::get('/create', [SalesQualificationController::class, 'create'])->name('create');
+        Route::post('/', [SalesQualificationController::class, 'store'])->name('store');
+        Route::get('/{qualification}', [SalesQualificationController::class, 'show'])->name('show');
+        Route::post('/{qualification}/answers/{questionCode}', [SalesQualificationController::class, 'updateAnswer'])->name('answers.update');
+        Route::post('/{qualification}/start', [SalesQualificationController::class, 'start'])->name('start');
+        Route::post('/{qualification}/wait', [SalesQualificationController::class, 'waitForClient'])->name('wait');
+        Route::post('/{qualification}/resume', [SalesQualificationController::class, 'resume'])->name('resume');
+        Route::post('/{qualification}/complete', [SalesQualificationController::class, 'complete'])->name('complete');
+        Route::post('/{qualification}/cancel', [SalesQualificationController::class, 'cancel'])->name('cancel');
+        Route::get('/attachments/{attachment}/download', [QualificationAttachmentController::class, 'download'])->name('attachments.download');
+        Route::delete('/attachments/{attachment}', [QualificationAttachmentController::class, 'destroy'])->name('attachments.destroy');
     });
 
 Route::middleware('auth')->prefix('client/portal')->name('client.portal.')

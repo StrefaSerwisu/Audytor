@@ -992,3 +992,63 @@ Rejestrowane sa zdarzenia `audit_type.created`, `audit_type.updated`, `audit_typ
 | `./vendor/bin/pint --test` | PASS |
 | `composer validate` | PASS: `composer.json is valid` |
 | `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+
+## 22. Etap 2B - kwalifikacja Sales
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2B dodaje odrebny workflow kwalifikacji Sales pod `/sales/qualifications`. Nie zmienia istniejacego modelu `Audit`, workflow audytora ani raportow MVP.
+
+### Modele i snapshot
+
+- `SalesQualification` wskazuje klienta, opcjonalna lokalizacje, typ audytu, konkretna opublikowana wersje oraz opiekuna Sales.
+- `QualificationAnswer` przechowuje wymagany `question_code`, snapshot pytania i typowana wartosc JSON. Relacja do biblioteki jest nullable.
+- `QualificationAttachment` przechowuje metadane prywatnego pliku i powiazanie z odpowiedzia.
+- `SalesQualificationStatus` definiuje: `draft`, `in_progress`, `waiting_for_client`, `completed`, `ready_for_pricing`, `cancelled`.
+- Przy tworzeniu zapisywany jest snapshot wylacznie aktywnej struktury Sales z aktualnie opublikowanej wersji. Pozniejsza publikacja nowszej wersji nie zmienia istniejacej kwalifikacji.
+
+### Dynamiczny formularz i warunki
+
+Widok kwalifikacji renderuje moduly i pytania ze snapshotu. Obslugiwane sa `text`, `textarea`, `number`, `boolean`, `select`, `multiselect`, `date`, `file` i `info`. Boolean ma trzy jawne wartosci: Tak, Nie, Nie wiem. Wartosci sa zapisywane w typowanej postaci JSON.
+
+`QualificationConditionService` obsluguje operatory `equals`, `not_equals`, `greater_than`, `less_than`, `contains`, `is_empty` i `is_not_empty`. Ukryte pytania zachowuja odpowiedz, ale nie sa liczone do aktywnego zakresu ani kompletnosci.
+
+### Kompletnosc i zakres
+
+`QualificationCompletionService` oblicza aktywne i wymagane pytania, odpowiedzi kompletne, braki, procent oraz liste brakow. Zero jest poprawna odpowiedzia liczbowa, Nie wiem jest poprawna odpowiedzia boolean, a plik jest kompletny dopiero po utworzeniu zalacznika.
+
+`QualificationScopeSummaryService` tworzy bez AI tekstowe podsumowanie klienta, lokalizacji, typu i wersji audytu, aktywnych modulow oraz odpowiedzi oznaczonych `affects_scope`.
+
+### Statusy i uprawnienia
+
+- Sales tworzy, widzi i edytuje tylko wlasne aktywne kwalifikacje.
+- Global Admin i Super Admin widza i edytuja wszystkie.
+- Technical Lead widzi wszystkie, ale nie zmienia odpowiedzi ani statusow.
+- Auditor i Client otrzymuja 403.
+- Obslugiwane przejscia: start, oczekiwanie, wznowienie, zakonczenie do `ready_for_pricing` oraz anulowanie z wymaganym powodem.
+
+### Pliki i audit trail
+
+Pliki PDF, JPG, PNG, DOCX i XLSX do 10 MB trafiaja na prywatny dysk `local`. Pobieranie wymaga prawa odczytu kwalifikacji, usuwanie prawa edycji; test IDOR blokuje obcego Sales.
+
+Audit log obejmuje utworzenie, start, oczekiwanie, wznowienie, zmiane odpowiedzi, zakonczenie, gotowosc do wyceny, anulowanie oraz dodanie i usuniecie pliku. Dlugie odpowiedzi nie sa zapisywane w calosci w metadanych.
+
+### Ograniczenia Etapu 2B
+
+- Brak kalkulatora cen i modelu oferty; przycisk wyceny wskazuje Etap 2C i jest nieaktywny.
+- Brak integracji kwalifikacji z `Audit`.
+- Brak autosave i Livewire; odpowiedzi sa zapisywane pojedynczym formularzem.
+- Brak AI, wysylki plikow do AI i automatycznego generowania zakresu przez model.
+- Brak klientowskiego formularza samoobslugowego oraz powiadomien o oczekiwaniu.
+
+### Wyniki walidacji Etapu 2B
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 34 migracje i seeder |
+| `php artisan test` | PASS: 132 testy, 607 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
