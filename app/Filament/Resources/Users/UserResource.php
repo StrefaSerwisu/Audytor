@@ -21,6 +21,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use UnitEnum;
 
@@ -61,7 +62,14 @@ class UserResource extends Resource
                             ->password()
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->dehydrated(fn (?string $state): bool => filled($state))
-                            ->minLength(12)
+                            ->confirmed()
+                            ->rules(self::passwordRules())
+                            ->maxLength(255),
+                        TextInput::make('password_confirmation')
+                            ->label('Potwierdz haslo')
+                            ->password()
+                            ->requiredWith('password')
+                            ->saved(false)
                             ->maxLength(255),
                         Select::make('role')
                             ->label('Rola')
@@ -80,6 +88,10 @@ class UserResource extends Resource
                             ->label('Konto aktywne')
                             ->default(true)
                             ->disabled(fn (?User $record): bool => auth()->id() === $record?->id),
+                        Toggle::make('mfa_enabled')
+                            ->label('MFA wlaczone')
+                            ->helperText('Flaga administracyjna. Obsluga MFA zostanie wdrozona w kolejnym etapie.')
+                            ->default(false),
                     ]),
                 ]),
         ]);
@@ -136,8 +148,19 @@ class UserResource extends Resource
      */
     public static function prepareFormData(array $data): array
     {
+        unset($data['password_confirmation']);
+
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
+        }
+
+        if (
+            auth()->user()?->hasRole(UserRole::GlobalAdmin)
+            && ($data['role'] ?? null) === UserRole::SuperAdmin->value
+        ) {
+            throw ValidationException::withMessages([
+                'role' => 'Tylko Super Admin moze nadac role Super Admin.',
+            ]);
         }
 
         if (($data['role'] ?? null) !== UserRole::Client->value) {
@@ -151,6 +174,12 @@ class UserResource extends Resource
         }
 
         return $data;
+    }
+
+    /** @return array<int, Password> */
+    public static function passwordRules(): array
+    {
+        return [Password::min(12)->letters()->numbers()->symbols()];
     }
 
     /** @return array<string, string> */

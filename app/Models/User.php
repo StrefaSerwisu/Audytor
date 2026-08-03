@@ -140,4 +140,43 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(AuditReportExport::class, 'queued_by');
     }
+
+    public function createdAudits(): HasMany
+    {
+        return $this->hasMany(Audit::class, 'created_by');
+    }
+
+    public function leadAudits(): HasMany
+    {
+        return $this->hasMany(Audit::class, 'lead_reviewer_id');
+    }
+
+    public function managedClients(): HasMany
+    {
+        return $this->hasMany(Client::class, 'account_manager_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'actor_id');
+    }
+
+    public function hasHistoricalRelations(): bool
+    {
+        return collect([
+            'managedClients',
+            'createdAudits',
+            'leadAudits',
+            'auditAssignments',
+            'auditAnswers',
+            'auditAnswerAttachments',
+            'auditReviews',
+            'auditPublications',
+            'auditClosures',
+            'auditNotifications',
+            'ownedFollowUpTasks',
+            'queuedReportExports',
+            'auditLogs',
+        ])->contains(fn (string $relation): bool => $this->{$relation}()->exists());
+    }
 }

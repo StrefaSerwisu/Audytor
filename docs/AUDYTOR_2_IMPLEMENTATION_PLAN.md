@@ -852,12 +852,14 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
    - tworzenie i edycja kont,
    - role z `UserRole`,
    - aktywnosc konta,
+   - administracyjna flaga `mfa_enabled` bez implementacji mechanizmu MFA,
+   - haslo minimum 12 znakow z literami, cyframi, symbolami i potwierdzeniem,
    - przypisanie konta klienta do firmy,
    - wyszukiwanie i filtrowanie.
 2. Dodano `UserPolicy`:
    - dostep do zarzadzania maja `super_admin` i `global_admin`,
    - `global_admin` nie moze zarzadzac kontem ani rola `super_admin`,
-   - tylko `super_admin` moze usuwac inne konta.
+   - tylko `super_admin` moze usuwac inne konta bez powiazan historycznych.
 3. Dodano zabezpieczenia modelu konta:
    - uzytkownik nie moze odebrac sobie roli ani zdezaktywowac wlasnego konta,
    - `global_admin` nie moze nadac ani zmienic roli `super_admin`,
@@ -871,7 +873,7 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
    - redakcja pol wrazliwych w centralnej usludze.
 5. Rejestrowane sa m.in.:
    - utworzenie, aktualizacja i usuniecie konta,
-   - pobranie i usuniecie dowodu,
+   - dodanie, pobranie i usuniecie dowodu,
    - wyslanie audytu, akceptacja techniczna i zwrot do poprawek,
    - publikacja, pobranie i eksport raportu,
    - zamkniecie audytu,
@@ -902,7 +904,7 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
 | Komenda | Wynik |
 | --- | --- |
 | `php artisan migrate:fresh --seed` | PASS: PostgreSQL, wszystkie migracje i seeder |
-| `php artisan test` | PASS: 94 testy, 420 asercji |
+| `php artisan test` | PASS: 101 testow, 453 asercje |
 | `./vendor/bin/pint --test` | PASS |
 | `composer validate` | PASS: `composer.json is valid` |
 | `php artisan migrate:status` | PASS: wszystkie migracje `Ran` |
@@ -912,7 +914,7 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
 ### Ograniczenia i dalszy zakres Etapu 1
 
 - Audit log nie ma jeszcze polityki retencji ani eksportu.
-- Dezaktywacja konta nie uniewaznia jeszcze wszystkich aktywnych sesji.
+- Dezaktywacja konta odcina kolejne zadania istniejacej sesji; rekord sesji nie jest jeszcze centralnie usuwany.
 - MFA pozostaje flaga danych; pelny mechanizm MFA i SSO jest poza Etapem 1B.
 - Filtry list pozostaja walidowane lokalnie w kontrolerach; operacje zapisu maja Form Requests.
 - Statusy audytu nadal sa stringami, a przejscia nie korzystaja jeszcze z centralnego workflow service.

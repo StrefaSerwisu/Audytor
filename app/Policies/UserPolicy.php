@@ -35,7 +35,8 @@ class UserPolicy
     {
         return $user->hasRole(UserRole::SuperAdmin)
             && $user->active
-            && ! $user->is($subject);
+            && ! $user->is($subject)
+            && ! $subject->hasHistoricalRelations();
     }
 
     private function canManageUsers(User $user): bool

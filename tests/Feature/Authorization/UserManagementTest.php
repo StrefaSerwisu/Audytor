@@ -11,6 +11,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -83,6 +84,44 @@ class UserManagementTest extends TestCase
         $auditor->update(['role' => UserRole::SuperAdmin]);
     }
 
+    public function test_manually_submitted_super_admin_role_is_rejected_for_global_admin(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $admin = User::where('email', 'admin@globalit.test')->firstOrFail();
+        $this->actingAs($admin);
+
+        $this->expectException(ValidationException::class);
+
+        UserResource::prepareFormData([
+            'name' => 'Niedozwolony Super Admin',
+            'email' => 'forged-superadmin@globalit.test',
+            'password' => 'SecurePassword12!',
+            'password_confirmation' => 'SecurePassword12!',
+            'role' => UserRole::SuperAdmin->value,
+            'active' => true,
+        ]);
+    }
+
+    public function test_global_admin_cannot_change_existing_super_admin_account(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $admin = User::where('email', 'admin@globalit.test')->firstOrFail();
+        $this->actingAs($admin);
+
+        foreach ([
+            ['name' => 'Zmieniona nazwa'],
+            ['active' => false],
+            ['password' => 'AnotherSecurePassword12!'],
+        ] as $changes) {
+            try {
+                User::where('email', 'superadmin@globalit.test')->firstOrFail()->update($changes);
+                $this->fail('Global admin zmodyfikowal konto super admina.');
+            } catch (AuthorizationException) {
+                $this->assertTrue(true);
+            }
+        }
+    }
+
     public function test_user_cannot_deactivate_own_account(): void
     {
         $this->seed(DatabaseSeeder::class);
@@ -153,6 +192,86 @@ class UserManagementTest extends TestCase
         $user->update($data);
 
         $this->assertSame($passwordHash, $user->refresh()->password);
+    }
+
+    public function test_password_requires_letters_numbers_symbols_and_confirmation(): void
+    {
+        $rules = ['password' => [...UserResource::passwordRules(), 'confirmed']];
+
+        $this->assertTrue(Validator::make([
+            'password' => 'SecurePassword12!',
+            'password_confirmation' => 'SecurePassword12!',
+        ], $rules)->passes());
+
+        foreach (['onlyletterslong', '123456789012', 'LettersAnd123', 'Short1!'] as $password) {
+            $this->assertFalse(Validator::make([
+                'password' => $password,
+                'password_confirmation' => $password,
+            ], $rules)->passes());
+        }
+
+        $this->assertFalse(Validator::make([
+            'password' => 'SecurePassword12!',
+            'password_confirmation' => 'DifferentPassword12!',
+        ], $rules)->passes());
+    }
+
+    public function test_password_confirmation_is_not_persisted_and_mfa_flag_is_saved(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $superAdmin = User::where('email', 'superadmin@globalit.test')->firstOrFail();
+        $this->actingAs($superAdmin);
+
+        $data = UserResource::prepareFormData([
+            'name' => 'Uzytkownik z MFA',
+            'email' => 'mfa@globalit.test',
+            'password' => 'SecurePassword12!',
+            'password_confirmation' => 'SecurePassword12!',
+            'role' => UserRole::Auditor->value,
+            'mfa_enabled' => true,
+            'active' => true,
+        ]);
+
+        $this->assertArrayNotHasKey('password_confirmation', $data);
+
+        $user = User::create($data);
+
+        $this->assertTrue($user->mfa_enabled);
+        $this->assertTrue(Hash::check('SecurePassword12!', $user->password));
+    }
+
+    public function test_user_with_historical_relations_cannot_be_permanently_deleted(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $superAdmin = User::where('email', 'superadmin@globalit.test')->firstOrFail();
+        $auditor = User::where('email', 'audytor@globalit.test')->firstOrFail();
+        $this->actingAs($superAdmin);
+
+        $this->assertTrue($auditor->hasHistoricalRelations());
+        $this->assertFalse($superAdmin->can('delete', $auditor));
+
+        $this->expectException(AuthorizationException::class);
+        $auditor->delete();
+    }
+
+    public function test_super_admin_can_permanently_delete_another_user_without_history(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $superAdmin = User::where('email', 'superadmin@globalit.test')->firstOrFail();
+        $this->actingAs($superAdmin);
+
+        $user = User::create([
+            'name' => 'Konto bez historii',
+            'email' => 'bez-historii@globalit.test',
+            'password' => 'SecurePassword12!',
+            'role' => UserRole::Auditor,
+            'active' => true,
+        ]);
+
+        $this->assertFalse($user->hasHistoricalRelations());
+        $this->assertTrue($superAdmin->can('delete', $user));
+        $this->assertTrue($user->delete());
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
     }
 
     public function test_audit_log_is_read_only_for_administrators(): void

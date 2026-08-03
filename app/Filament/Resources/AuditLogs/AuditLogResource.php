@@ -65,6 +65,7 @@ class AuditLogResource extends Resource
                     'user.created' => 'Utworzenie uzytkownika',
                     'user.updated' => 'Zmiana uzytkownika',
                     'user.deleted' => 'Usuniecie uzytkownika',
+                    'evidence.uploaded' => 'Dodanie dowodu',
                     'evidence.downloaded' => 'Pobranie dowodu',
                     'evidence.deleted' => 'Usuniecie dowodu',
                     'audit.submitted_for_review' => 'Wyslanie audytu',

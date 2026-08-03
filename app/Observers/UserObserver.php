@@ -80,8 +80,11 @@ class UserObserver
 
     public function deleting(User $user): void
     {
-        if (Auth::id() === $user->id) {
-            throw new AuthorizationException('Nie mozna usunac wlasnego konta.');
+        /** @var User|null $actor */
+        $actor = Auth::user();
+
+        if (! $actor?->can('delete', $user)) {
+            throw new AuthorizationException('Tego konta nie mozna trwale usunac. Uzyj dezaktywacji.');
         }
     }
 

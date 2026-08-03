@@ -118,7 +118,7 @@ class AuditorAuditController extends Controller
         foreach ($request->file('attachments', []) as $file) {
             $storedPath = $file->store("audit-evidence/audits/{$audit->id}/answers/{$answer->id}", 'local');
 
-            $answer->attachments()->create([
+            $attachment = $answer->attachments()->create([
                 'audit_id' => $audit->id,
                 'audit_question_id' => $question->id,
                 'audit_module_id' => $question->audit_module_id,
@@ -131,6 +131,14 @@ class AuditorAuditController extends Controller
                 'size_bytes' => $file->getSize(),
                 'caption' => $validated['attachment_caption'] ?? null,
                 'local_uuid' => Str::uuid()->toString(),
+            ]);
+
+            AuditLogService::record('evidence.uploaded', $attachment, metadata: [
+                'audit_id' => $audit->id,
+                'attachment_id' => $attachment->id,
+                'original_name' => $attachment->original_name,
+                'mime_type' => $attachment->mime_type,
+                'size_bytes' => $attachment->size_bytes,
             ]);
         }
 

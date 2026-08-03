@@ -13,6 +13,8 @@ class RequireRole
     {
         $user = $request->user();
 
+        $user?->refresh();
+
         abort_unless($user && $user->active, 403);
 
         $allowedRoles = collect($roles)
