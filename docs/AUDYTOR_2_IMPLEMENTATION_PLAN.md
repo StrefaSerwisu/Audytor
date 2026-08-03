@@ -919,3 +919,76 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
 - Filtry list pozostaja walidowane lokalnie w kontrolerach; operacje zapisu maja Form Requests.
 - Statusy audytu nadal sa stringami, a przejscia nie korzystaja jeszcze z centralnego workflow service.
 - Przed Etapem 2 nalezy domknac pozostala czesc Etapu 1: `AuditStatus`, centralne akcje przejsc statusow i testy dozwolonych przejsc.
+
+## 21. Etap 2A - typy audytow i wersjonowanie
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2A rozpoczyna rownolegla biblioteke produktow audytowych 2.0. Nie usuwa ani nie modyfikuje modeli MVP: `AuditTemplate`, `AuditModule`, `AuditQuestion` i `Recommendation`. Istniejace audyty oraz workflow audytora nadal korzystaja z dotychczasowej biblioteki.
+
+### Modele i zaleznosci
+
+1. `AuditType` definiuje produkt audytowy, jego kod, kategorie, instrukcje Sales i delivery oraz wskazanie aktualnej wersji.
+2. `AuditTypeVersion` przechowuje wersjonowany snapshot nazwy i opisu, instrukcje, czasy, minimalny poziom kompetencji oraz przyszla konfiguracje AI.
+3. `AuditTypeModule` rozdziela moduly `sales` i `technical` w ramach konkretnej wersji.
+4. `SalesQualificationQuestion` nalezy wylacznie do modulu Sales i zawiera flagi przyszlego wplywu na zakres oraz wycene.
+5. `AuditControlDefinition` nalezy wylacznie do modulu technicznego i zawiera szczegolowa instrukcje wykonania, wymagany dostep, narzedzia, kryteria, dowody i ryzyko.
+6. `CompetencyLevel` jest prostym Enum bez tabel kompetencji uzytkownika.
+
+### Publikacja i niezmiennosc
+
+- Nowa wersja zawsze powstaje jako `draft`.
+- Publikacja wymaga przynajmniej jednego aktywnego modulu oraz przynajmniej jednego aktywnego modulu technicznego.
+- Publikacja ustawia `published_at`, `published_by`, status `published` i `current_version_id` typu audytu.
+- Opublikowana wersja i jej moduly, pytania oraz kontrole sa niemodyfikowalne.
+- Dalsze zmiany wymagaja kolejnej wersji roboczej.
+- Usuwac mozna tylko rekordy wersji roboczej; typ z historia opublikowana lub archiwalna jest chroniony przed usunieciem.
+- Stara opublikowana wersja moze zostac zarchiwizowana bez zmiany nowszej wersji aktualnej.
+
+### Snapshot
+
+`AuditTypeVersion::snapshot()` zwraca samowystarczalna tablice zawierajaca:
+
+- dane i czasy wersji,
+- poziom kompetencji i konfiguracje AI,
+- posortowane moduly Sales wraz z pytaniami kwalifikacyjnymi,
+- posortowane moduly techniczne wraz z pelnymi kontrolami technicznymi.
+
+Zmiana nowej wersji nie zmienia snapshotu wersji juz opublikowanej. W przyszlym etapie snapshot bedzie zapisywany przy utworzeniu konkretnego audytu.
+
+### Panel administratora
+
+W grupie Filament `Biblioteka audytow` dodano zasoby:
+
+- Typy audytow,
+- Wersje audytow,
+- Moduly wersji,
+- Pytania kwalifikacyjne,
+- Kontrole techniczne.
+
+Dostep maja aktywni `super_admin`, `global_admin` i `technical_lead`. Role `sales` i `auditor` nie maja dostepu do tej biblioteki administracyjnej. Akcja `Opublikuj wersje` wywoluje walidowana operacje domenowa i zapisuje audit log.
+
+### Audit trail
+
+Rejestrowane sa zdarzenia `audit_type.created`, `audit_type.updated`, `audit_type_version.created`, `audit_type_version.published`, `audit_type_version.archived`, `audit_type_module.created`, `sales_question.created` i `audit_control.created`. Metadane zawieraja identyfikatory i podstawowe nazwy lub kody, bez pelnych instrukcji.
+
+### Ograniczenia Etapu 2A
+
+- Brak formularza kwalifikacji Sales i przechowywania odpowiedzi.
+- Brak kalkulatora wyceny oraz regul cenowych.
+- Brak przypisania poziomu kompetencji do uzytkownikow.
+- Konfiguracja AI jest tylko struktura danych; analiza AI nie jest uruchamiana.
+- Istniejace audyty nie sa migrowane i nie korzystaja jeszcze ze snapshotow `AuditTypeVersion`.
+- `current_version_id` jest kontrolowane przez operacje publikacji i indeksowane, ale celowo nie ma cyklicznego klucza obcego dla zgodnosci PostgreSQL/SQLite.
+
+### Wyniki walidacji Etapu 2A
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 31 migracji i seeder |
+| `php artisan test` | PASS: 118 testow, 522 asercje; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
