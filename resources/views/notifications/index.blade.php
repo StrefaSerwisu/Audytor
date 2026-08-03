@@ -40,6 +40,10 @@
                         <span class="pill">{{ $notification->created_at->format('Y-m-d H:i') }}</span>
                         @if ($notification->audit)
                             <span class="pill">{{ $notification->audit->client->name }}</span>
+                        @elseif ($notification->auditOrder)
+                            <span class="pill">{{ $notification->auditOrder->client->name }}</span>
+                        @elseif ($notification->technicalAudit)
+                            <span class="pill">{{ $notification->technicalAudit->client->name }}</span>
                         @endif
                     </div>
                     <div class="stack">

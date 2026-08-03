@@ -137,6 +137,23 @@ class RoleAuthorizationTest extends TestCase
         $this->actingAs($inactiveAuditor)->get(route('auditor.index'))->assertForbidden();
     }
 
+    public function test_existing_session_loses_access_after_account_is_deactivated(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $auditor = User::where('email', 'audytor@globalit.test')->firstOrFail();
+
+        $this->post(route('auditor.login.store'), [
+            'email' => $auditor->email,
+            'password' => 'password',
+        ])->assertRedirect(route('auditor.index'));
+
+        $this->assertAuthenticatedAs($auditor);
+
+        User::query()->whereKey($auditor->id)->update(['active' => false]);
+
+        $this->get(route('auditor.index'))->assertForbidden();
+    }
+
     public function test_client_login_rejects_inactive_client_account(): void
     {
         $this->seed(DatabaseSeeder::class);

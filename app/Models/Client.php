@@ -42,4 +42,14 @@ class Client extends Model
     {
         return $this->hasMany(Audit::class);
     }
+
+    public function salesQualifications(): HasMany
+    {
+        return $this->hasMany(SalesQualification::class);
+    }
+
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class);
+    }
 }

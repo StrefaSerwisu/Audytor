@@ -107,7 +107,7 @@ MVP jest funkcjonalne. Pokryte sa:
 - powiadomienia,
 - PWA podstawowe.
 
-Wazny stan repo: `git status --short` pokazuje praktycznie caly projekt jako niezatwierdzony (`??`). Przed wiekszym rozwojem warto ustalic baseline w Git i zrobic pierwszy commit/branch, zeby nie zgubic historii zmian.
+Baseline Git jest ustalony. Etap 1A zostal scalony do `main`, a Etap 1B jest rozwijany na `codex/etap-1b-security-foundation`.
 
 Ostatnio dokumentacja z lipca wskazywala przechodzace testy feature. Przy wznowieniu prac trzeba ponownie uruchomic `php artisan test`, `./vendor/bin/pint --test`, `composer validate` i, jesli zaleznosci Node sa dostepne, `npm run build`.
 
@@ -125,13 +125,14 @@ Ostatnio dokumentacja z lipca wskazywala przechodzace testy feature. Przy wznowi
 
 - PDF/DOCX sa minimalne technicznie, bez finalnego brandingu i zaawansowanego layoutu.
 - Offline nie jest pelnym syncem; IndexedDB trzyma drafty, ale nie ma pelnej automatycznej wysylki do backendu.
-- Autoryzacja jest glownie inline w kontrolerach, nie w policies.
-- Brak osobnego CRUD uzytkownikow w Filament.
+- Etap 1A dodal Enum rol, middleware i Policies dla kluczowych modeli.
+- Etap 1B dodal utwardzony CRUD uzytkownikow w Filament, centralny `AuditLog`, logowanie uploadu dowodow i Form Requests dla kluczowych akcji.
+- Logowanie audytora i klienta jest ograniczone wspolnym limiterem `login`: 5 prob/min dla e-mail + IP.
 - Brak E2E/browser tests.
 - Brak realnych integracji zewnetrznych.
 - `docs/architecture.md` zawiera starsza wzmianke o Inertia/Vue jako docelowym stacku, ale realny projekt uzywa Blade/Filament.
 - W repo widoczny jest `app/.DS_Store`; nie usuwac bez zgody uzytkownika, ale warto posprzatac.
-- Sales ma dostep do panelu Filament przez `User::canAccessPanel`, ale nalezy biznesowo ustalic, czy to docelowe.
+- Sales nie ma dostepu do panelu Filament.
 
 ## Zalecany sposob dalszej pracy z Codex
 
@@ -175,10 +176,10 @@ npm run build
 
 Najbardziej wartosciowe nastepne prace:
 
-1. Ustalic baseline w Git i uruchomic pelna walidacje.
+1. Utrzymywac prace etapowe na osobnych galeziach i scalac przez PR po pelnej walidacji.
 2. Przejsc recznie scenariusz end-to-end na danych testowych.
-3. Dodac CRUD uzytkownikow i lepsza administracje rolami.
+3. Domknac pozostala czesc Etapu 1: Enum/status workflow i centralne akcje przejsc statusow.
 4. Dopracowac PDF/DOCX pod branding Global IT.
 5. UAT biblioteki pytan i rekomendacji.
-6. Policies/Form Requests dla uporzadkowania autoryzacji i walidacji.
+6. Rozszerzac Policies/Form Requests wraz z nowymi modulami.
 7. Pelny offline sync albo jasne ograniczenie offline tylko do draftow.

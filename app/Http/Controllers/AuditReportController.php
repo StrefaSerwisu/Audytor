@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PublishAuditReportRequest;
+use App\Http\Requests\QueueAuditReportExportRequest;
 use App\Jobs\GenerateAuditReportExport;
 use App\Models\Audit;
 use App\Models\AuditAnswer;
 use App\Models\AuditQuestion;
 use App\Models\Recommendation;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\AuditNotifier;
 use App\Support\AuditReportData;
 use App\Support\SimpleDocx;
@@ -85,7 +88,7 @@ class AuditReportController extends Controller
         ]);
     }
 
-    public function publish(Request $request, Audit $audit): RedirectResponse
+    public function publish(PublishAuditReportRequest $request, Audit $audit): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -93,10 +96,7 @@ class AuditReportController extends Controller
         abort_unless($user->can('publish', $audit), 403);
         $this->ensurePublishable($audit);
 
-        $validated = $request->validate([
-            'notes' => ['nullable', 'string', 'max:2000'],
-            'expires_at' => ['nullable', 'date', 'after:today'],
-        ]);
+        $validated = $request->validated();
 
         $publication = $audit->publications()->create([
             'published_by' => $user->id,
@@ -106,9 +106,22 @@ class AuditReportController extends Controller
             'expires_at' => $validated['expires_at'] ?? null,
         ]);
 
+        $oldStatus = $audit->status;
+
         $audit->forceFill([
             'status' => 'published_to_client',
         ])->save();
+
+        AuditLogService::record(
+            'report.published',
+            $publication,
+            oldValues: ['audit_status' => $oldStatus],
+            newValues: [
+                'audit_status' => $audit->status,
+                'expires_at' => $publication->expires_at,
+            ],
+            metadata: ['audit_id' => $audit->id],
+        );
 
         AuditNotifier::notifyAssignees(
             $audit,
@@ -133,7 +146,7 @@ class AuditReportController extends Controller
         return $this->downloadReport($request, $audit, $type, 'docx');
     }
 
-    public function queueExport(Request $request, Audit $audit, string $type): RedirectResponse
+    public function queueExport(QueueAuditReportExportRequest $request, Audit $audit, string $type): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -141,12 +154,17 @@ class AuditReportController extends Controller
         $this->authorizeReportType($user, $audit, $type);
         $this->ensureReportable($audit);
 
-        $validated = $request->validate([
-            'format' => ['required', 'string', 'in:pdf,docx'],
-        ]);
+        $validated = $request->validated();
 
         $export = $audit->reportExports()->create([
             'queued_by' => $user->id,
+            'report_type' => $type,
+            'format' => $validated['format'],
+            'status' => 'queued',
+        ]);
+
+        AuditLogService::record('report_export.queued', $export, newValues: [
+            'audit_id' => $audit->id,
             'report_type' => $type,
             'format' => $validated['format'],
             'status' => 'queued',
@@ -203,6 +221,11 @@ class AuditReportController extends Controller
         $contentType = $format === 'docx'
             ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             : 'application/pdf';
+
+        AuditLogService::record('report.downloaded', $audit, metadata: [
+            'report_type' => $type,
+            'format' => $format,
+        ]);
 
         return response($content, 200, [
             'Content-Type' => $contentType,

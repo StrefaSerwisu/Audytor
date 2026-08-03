@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Requests\UpdateClientReportFeedbackRequest;
+use App\Http\Requests\UpdateClientReportStatusRequest;
 use App\Models\AuditAnswer;
 use App\Models\AuditPublication;
 use App\Models\AuditQuestion;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\FollowUpTaskBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -74,43 +77,53 @@ class ClientPortalController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, AuditPublication $publication): RedirectResponse
+    public function updateStatus(UpdateClientReportStatusRequest $request, AuditPublication $publication): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         abort_unless($user->can('updateClientDecision', $publication), 403);
 
-        $validated = $request->validate([
-            'client_status' => ['required', 'string', 'in:received,to_discuss,accepted'],
-        ]);
+        $validated = $request->validated();
+        $oldStatus = $publication->client_status;
 
         $publication->forceFill([
             'client_status' => $validated['client_status'],
             'client_status_updated_at' => now(),
         ])->save();
 
+        AuditLogService::record(
+            'client_report.status_updated',
+            $publication,
+            oldValues: ['client_status' => $oldStatus],
+            newValues: ['client_status' => $publication->client_status],
+        );
+
         return back()->with('status', 'Status raportu zostal zapisany.');
     }
 
-    public function updateFeedback(Request $request, AuditPublication $publication): RedirectResponse
+    public function updateFeedback(UpdateClientReportFeedbackRequest $request, AuditPublication $publication): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         abort_unless($user->can('updateClientDecision', $publication), 403);
 
-        $validated = $request->validate([
-            'client_comment' => ['nullable', 'string', 'max:5000'],
-            'accepted_recommendations' => ['nullable', 'array'],
-            'accepted_recommendations.*' => ['string', 'max:120'],
-        ]);
+        $validated = $request->validated();
+        $oldValues = $publication->only(['client_comment', 'accepted_recommendations_json']);
 
         $publication->forceFill([
             'client_comment' => $validated['client_comment'] ?? null,
             'accepted_recommendations_json' => array_values(array_unique($validated['accepted_recommendations'] ?? [])),
             'client_feedback_at' => now(),
         ])->save();
+
+        AuditLogService::record(
+            'client_report.feedback_updated',
+            $publication,
+            oldValues: $oldValues,
+            newValues: $publication->only(['client_comment', 'accepted_recommendations_json']),
+        );
 
         FollowUpTaskBuilder::syncFromPublication($publication);
 

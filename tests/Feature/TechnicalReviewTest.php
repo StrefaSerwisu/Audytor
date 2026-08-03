@@ -71,6 +71,12 @@ class TechnicalReviewTest extends TestCase
             'decision' => 'approved',
             'notes' => 'Zakres audytu technicznie poprawny.',
         ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $lead->id,
+            'event' => 'audit.technically_approved',
+            'subject_type' => Audit::class,
+            'subject_id' => $audit->id,
+        ]);
     }
 
     public function test_technical_lead_can_request_changes_with_notes(): void

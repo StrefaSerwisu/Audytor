@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\CompetencyLevel;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
@@ -32,6 +33,7 @@ class User extends Authenticatable implements FilamentUser
         'client_id',
         'mfa_enabled',
         'active',
+        'competency_level',
     ];
 
     /**
@@ -57,6 +59,7 @@ class User extends Authenticatable implements FilamentUser
             'role' => UserRole::class,
             'mfa_enabled' => 'boolean',
             'active' => 'boolean',
+            'competency_level' => CompetencyLevel::class,
         ];
     }
 
@@ -139,5 +142,140 @@ class User extends Authenticatable implements FilamentUser
     public function queuedReportExports(): HasMany
     {
         return $this->hasMany(AuditReportExport::class, 'queued_by');
+    }
+
+    public function createdAudits(): HasMany
+    {
+        return $this->hasMany(Audit::class, 'created_by');
+    }
+
+    public function leadAudits(): HasMany
+    {
+        return $this->hasMany(Audit::class, 'lead_reviewer_id');
+    }
+
+    public function managedClients(): HasMany
+    {
+        return $this->hasMany(Client::class, 'account_manager_id');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'actor_id');
+    }
+
+    public function salesQualifications(): HasMany
+    {
+        return $this->hasMany(SalesQualification::class, 'sales_owner_id');
+    }
+
+    public function completedQualifications(): HasMany
+    {
+        return $this->hasMany(SalesQualification::class, 'completed_by');
+    }
+
+    public function qualificationAnswers(): HasMany
+    {
+        return $this->hasMany(QualificationAnswer::class, 'answered_by');
+    }
+
+    public function qualificationAttachments(): HasMany
+    {
+        return $this->hasMany(QualificationAttachment::class, 'uploaded_by');
+    }
+
+    public function ownedQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'sales_owner_id');
+    }
+
+    public function quotationOverrides(): HasMany
+    {
+        return $this->hasMany(QuotationOverride::class);
+    }
+
+    public function auditOrderAssignments(): HasMany
+    {
+        return $this->hasMany(AuditOrderAssignee::class);
+    }
+
+    public function ownedAuditOrders(): HasMany
+    {
+        return $this->hasMany(AuditOrder::class, 'delivery_owner_id');
+    }
+
+    public function ledAuditOrders(): HasMany
+    {
+        return $this->hasMany(AuditOrder::class, 'technical_lead_id');
+    }
+
+    public function createdAuditOrders(): HasMany
+    {
+        return $this->hasMany(AuditOrder::class, 'created_by');
+    }
+
+    public function assignedTechnicalControls(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditControl::class, 'assigned_to');
+    }
+
+    public function technicalAuditAnswers(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditAnswer::class, 'answered_by');
+    }
+
+    public function technicalAuditEvidence(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditEvidence::class, 'uploaded_by');
+    }
+
+    public function createdTechnicalEscalations(): HasMany
+    {
+        return $this->hasMany(TechnicalAuditEscalation::class, 'created_by');
+    }
+
+    public function calculatedQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'calculated_by');
+    }
+
+    public function approvedQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'internally_approved_by');
+    }
+
+    public function sentQuotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class, 'sent_by');
+    }
+
+    public function hasHistoricalRelations(): bool
+    {
+        return collect([
+            'managedClients',
+            'createdAudits',
+            'leadAudits',
+            'auditAssignments',
+            'auditAnswers',
+            'auditAnswerAttachments',
+            'auditReviews',
+            'auditPublications',
+            'auditClosures',
+            'auditNotifications',
+            'ownedFollowUpTasks',
+            'queuedReportExports',
+            'auditLogs',
+            'salesQualifications',
+            'completedQualifications',
+            'qualificationAnswers',
+            'qualificationAttachments',
+            'ownedQuotations',
+            'quotationOverrides',
+            'calculatedQuotations',
+            'approvedQuotations',
+            'sentQuotations',
+            'auditOrderAssignments', 'ownedAuditOrders', 'ledAuditOrders', 'createdAuditOrders',
+            'assignedTechnicalControls', 'technicalAuditAnswers', 'technicalAuditEvidence', 'createdTechnicalEscalations',
+        ])->contains(fn (string $relation): bool => $this->{$relation}()->exists());
     }
 }

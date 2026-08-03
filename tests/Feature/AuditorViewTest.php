@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Audit;
 use App\Models\AuditAnswer;
 use App\Models\AuditAnswerAttachment;
+use App\Models\AuditLog;
 use App\Models\AuditQuestion;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -125,6 +126,18 @@ class AuditorViewTest extends TestCase
         $this->assertSame('dashboard.png', $attachment->original_name);
         $this->assertSame('Widok statusu urzadzenia', $attachment->caption);
         Storage::disk('local')->assertExists($attachment->path);
+
+        $uploadLog = AuditLog::where('event', 'evidence.uploaded')
+            ->where('subject_id', $attachment->id)
+            ->firstOrFail();
+
+        $this->assertSame($auditor->id, $uploadLog->actor_id);
+        $this->assertSame($audit->id, $uploadLog->metadata['audit_id']);
+        $this->assertSame($attachment->id, $uploadLog->metadata['attachment_id']);
+        $this->assertSame('dashboard.png', $uploadLog->metadata['original_name']);
+        $this->assertSame($attachment->mime_type, $uploadLog->metadata['mime_type']);
+        $this->assertSame($attachment->size_bytes, $uploadLog->metadata['size_bytes']);
+        $this->assertArrayNotHasKey('contents', $uploadLog->metadata);
     }
 
     public function test_risk_enabled_answer_requires_risk_level(): void

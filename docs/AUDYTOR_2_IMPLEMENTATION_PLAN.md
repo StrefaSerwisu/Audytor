@@ -837,3 +837,417 @@ Etap 1B mozna rozpoczac dopiero po lacznym spelnieniu warunkow:
    - workflow/status actions.
 
 Nie rozpoczynac Etapu 2 ani funkcji biznesowych 2.0 przed zamknieciem calego Etapu 1.
+
+## 20. Etap 1B - wynik implementacji
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie walidacji kluczowych akcji. Nie rozpoczeto Etapu 2 ani przebudowy workflow statusow.
+
+### Zakres wykonany
+
+1. Dodano `UserResource` w Filament:
+   - tworzenie i edycja kont,
+   - role z `UserRole`,
+   - aktywnosc konta,
+   - administracyjna flaga `mfa_enabled` bez implementacji mechanizmu MFA,
+   - haslo minimum 12 znakow z literami, cyframi, symbolami i potwierdzeniem,
+   - przypisanie konta klienta do firmy,
+   - wyszukiwanie i filtrowanie.
+2. Dodano `UserPolicy`:
+   - dostep do zarzadzania maja `super_admin` i `global_admin`,
+   - `global_admin` nie moze zarzadzac kontem ani rola `super_admin`,
+   - tylko `super_admin` moze usuwac inne konta bez powiazan historycznych.
+3. Dodano zabezpieczenia modelu konta:
+   - uzytkownik nie moze odebrac sobie roli ani zdezaktywowac wlasnego konta,
+   - `global_admin` nie moze nadac ani zmienic roli `super_admin`,
+   - przypisanie klienta jest automatycznie czyszczone dla rol wewnetrznych.
+4. Dodano centralny audit trail:
+   - migracja i model `AuditLog`,
+   - usluga `AuditLogService`,
+   - aktor, zdarzenie, obiekt, stare i nowe wartosci, metadane, IP, user agent i data,
+   - filtrowany, tylko do odczytu `AuditLogResource` w Filament,
+   - automatyczny audit zmian uzytkownikow przez `UserObserver`,
+   - redakcja pol wrazliwych w centralnej usludze.
+5. Rejestrowane sa m.in.:
+   - utworzenie, aktualizacja i usuniecie konta,
+   - dodanie, pobranie i usuniecie dowodu,
+   - wyslanie audytu, akceptacja techniczna i zwrot do poprawek,
+   - publikacja, pobranie i eksport raportu,
+   - zamkniecie audytu,
+   - zmiana follow-upu,
+   - status i feedback klienta.
+   - udane, nieudane i odrzucone logowanie oraz wylogowanie.
+6. Dodano Form Requests dla kluczowych operacji zapisu:
+   - logowanie,
+   - zapis odpowiedzi audytora i zalacznikow,
+   - akceptacja i zwrot audytu,
+   - publikacja i kolejka eksportu raportu,
+   - zamkniecie audytu,
+   - aktualizacja follow-upu,
+   - status i feedback klienta.
+7. Dodano testy dostepu, zabezpieczen kont oraz audit trailu dowodow i workflow.
+8. Dodano rate limiting logowania audytora i klienta:
+   - 5 prob na minute,
+   - klucz limitu: znormalizowany e-mail + adres IP,
+   - odpowiedz `429` po przekroczeniu limitu.
+9. Recznie sprawdzono w Filament:
+   - menu `Bezpieczenstwo`,
+   - liste i formularz uzytkownikow,
+   - dziennik zdarzen,
+   - brak problemow z ukladem nowych ekranow.
+
+### Wyniki walidacji Etapu 1B
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, wszystkie migracje i seeder |
+| `php artisan test` | PASS: 101 testow, 453 asercje |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `php artisan migrate:status` | PASS: wszystkie migracje `Ran` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list` | PASS: 66 tras |
+
+### Ograniczenia i dalszy zakres Etapu 1
+
+- Audit log nie ma jeszcze polityki retencji ani eksportu.
+- Dezaktywacja konta odcina kolejne zadania istniejacej sesji; rekord sesji nie jest jeszcze centralnie usuwany.
+- MFA pozostaje flaga danych; pelny mechanizm MFA i SSO jest poza Etapem 1B.
+- Filtry list pozostaja walidowane lokalnie w kontrolerach; operacje zapisu maja Form Requests.
+- Statusy audytu nadal sa stringami, a przejscia nie korzystaja jeszcze z centralnego workflow service.
+- Przed Etapem 2 nalezy domknac pozostala czesc Etapu 1: `AuditStatus`, centralne akcje przejsc statusow i testy dozwolonych przejsc.
+
+## 21. Etap 2A - typy audytow i wersjonowanie
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2A rozpoczyna rownolegla biblioteke produktow audytowych 2.0. Nie usuwa ani nie modyfikuje modeli MVP: `AuditTemplate`, `AuditModule`, `AuditQuestion` i `Recommendation`. Istniejace audyty oraz workflow audytora nadal korzystaja z dotychczasowej biblioteki.
+
+### Modele i zaleznosci
+
+1. `AuditType` definiuje produkt audytowy, jego kod, kategorie, instrukcje Sales i delivery oraz wskazanie aktualnej wersji.
+2. `AuditTypeVersion` przechowuje wersjonowany snapshot nazwy i opisu, instrukcje, czasy, minimalny poziom kompetencji oraz przyszla konfiguracje AI.
+3. `AuditTypeModule` rozdziela moduly `sales` i `technical` w ramach konkretnej wersji.
+4. `SalesQualificationQuestion` nalezy wylacznie do modulu Sales i zawiera flagi przyszlego wplywu na zakres oraz wycene.
+5. `AuditControlDefinition` nalezy wylacznie do modulu technicznego i zawiera szczegolowa instrukcje wykonania, wymagany dostep, narzedzia, kryteria, dowody i ryzyko.
+6. `CompetencyLevel` jest prostym Enum bez tabel kompetencji uzytkownika.
+
+### Publikacja i niezmiennosc
+
+- Nowa wersja zawsze powstaje jako `draft`.
+- Publikacja wymaga przynajmniej jednego aktywnego modulu oraz przynajmniej jednego aktywnego modulu technicznego.
+- Publikacja ustawia `published_at`, `published_by`, status `published` i `current_version_id` typu audytu.
+- Opublikowana wersja i jej moduly, pytania oraz kontrole sa niemodyfikowalne.
+- Dalsze zmiany wymagaja kolejnej wersji roboczej.
+- Usuwac mozna tylko rekordy wersji roboczej; typ z historia opublikowana lub archiwalna jest chroniony przed usunieciem.
+- Stara opublikowana wersja moze zostac zarchiwizowana bez zmiany nowszej wersji aktualnej.
+
+### Snapshot
+
+`AuditTypeVersion::snapshot()` zwraca samowystarczalna tablice zawierajaca:
+
+- dane i czasy wersji,
+- poziom kompetencji i konfiguracje AI,
+- posortowane moduly Sales wraz z pytaniami kwalifikacyjnymi,
+- posortowane moduly techniczne wraz z pelnymi kontrolami technicznymi.
+
+Zmiana nowej wersji nie zmienia snapshotu wersji juz opublikowanej. W przyszlym etapie snapshot bedzie zapisywany przy utworzeniu konkretnego audytu.
+
+### Panel administratora
+
+W grupie Filament `Biblioteka audytow` dodano zasoby:
+
+- Typy audytow,
+- Wersje audytow,
+- Moduly wersji,
+- Pytania kwalifikacyjne,
+- Kontrole techniczne.
+
+Dostep maja aktywni `super_admin`, `global_admin` i `technical_lead`. Role `sales` i `auditor` nie maja dostepu do tej biblioteki administracyjnej. Akcja `Opublikuj wersje` wywoluje walidowana operacje domenowa i zapisuje audit log.
+
+### Audit trail
+
+Rejestrowane sa zdarzenia `audit_type.created`, `audit_type.updated`, `audit_type_version.created`, `audit_type_version.published`, `audit_type_version.archived`, `audit_type_module.created`, `sales_question.created` i `audit_control.created`. Metadane zawieraja identyfikatory i podstawowe nazwy lub kody, bez pelnych instrukcji.
+
+### Ograniczenia Etapu 2A
+
+- Brak formularza kwalifikacji Sales i przechowywania odpowiedzi.
+- Brak kalkulatora wyceny oraz regul cenowych.
+- Brak przypisania poziomu kompetencji do uzytkownikow.
+- Konfiguracja AI jest tylko struktura danych; analiza AI nie jest uruchamiana.
+- Istniejace audyty nie sa migrowane i nie korzystaja jeszcze ze snapshotow `AuditTypeVersion`.
+- `current_version_id` jest kontrolowane przez operacje publikacji i indeksowane, ale celowo nie ma cyklicznego klucza obcego dla zgodnosci PostgreSQL/SQLite.
+
+### Wyniki walidacji Etapu 2A
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 31 migracji i seeder |
+| `php artisan test` | PASS: 118 testow, 522 asercje; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+
+## 22. Etap 2B - kwalifikacja Sales
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2B dodaje odrebny workflow kwalifikacji Sales pod `/sales/qualifications`. Nie zmienia istniejacego modelu `Audit`, workflow audytora ani raportow MVP.
+
+### Modele i snapshot
+
+- `SalesQualification` wskazuje klienta, opcjonalna lokalizacje, typ audytu, konkretna opublikowana wersje oraz opiekuna Sales.
+- `QualificationAnswer` przechowuje wymagany `question_code`, snapshot pytania i typowana wartosc JSON. Relacja do biblioteki jest nullable.
+- `QualificationAttachment` przechowuje metadane prywatnego pliku i powiazanie z odpowiedzia.
+- `SalesQualificationStatus` definiuje: `draft`, `in_progress`, `waiting_for_client`, `completed`, `ready_for_pricing`, `cancelled`.
+- Przy tworzeniu zapisywany jest snapshot wylacznie aktywnej struktury Sales z aktualnie opublikowanej wersji. Pozniejsza publikacja nowszej wersji nie zmienia istniejacej kwalifikacji.
+
+### Dynamiczny formularz i warunki
+
+Widok kwalifikacji renderuje moduly i pytania ze snapshotu. Obslugiwane sa `text`, `textarea`, `number`, `boolean`, `select`, `multiselect`, `date`, `file` i `info`. Boolean ma trzy jawne wartosci: Tak, Nie, Nie wiem. Wartosci sa zapisywane w typowanej postaci JSON.
+
+`QualificationConditionService` obsluguje operatory `equals`, `not_equals`, `greater_than`, `less_than`, `contains`, `is_empty` i `is_not_empty`. Ukryte pytania zachowuja odpowiedz, ale nie sa liczone do aktywnego zakresu ani kompletnosci.
+
+### Kompletnosc i zakres
+
+`QualificationCompletionService` oblicza aktywne i wymagane pytania, odpowiedzi kompletne, braki, procent oraz liste brakow. Zero jest poprawna odpowiedzia liczbowa, Nie wiem jest poprawna odpowiedzia boolean, a plik jest kompletny dopiero po utworzeniu zalacznika.
+
+`QualificationScopeSummaryService` tworzy bez AI tekstowe podsumowanie klienta, lokalizacji, typu i wersji audytu, aktywnych modulow oraz odpowiedzi oznaczonych `affects_scope`.
+
+### Statusy i uprawnienia
+
+- Sales tworzy, widzi i edytuje tylko wlasne aktywne kwalifikacje.
+- Global Admin i Super Admin widza i edytuja wszystkie.
+- Technical Lead widzi wszystkie, ale nie zmienia odpowiedzi ani statusow.
+- Auditor i Client otrzymuja 403.
+- Obslugiwane przejscia: start, oczekiwanie, wznowienie, zakonczenie do `ready_for_pricing` oraz anulowanie z wymaganym powodem.
+
+### Pliki i audit trail
+
+Pliki PDF, JPG, PNG, DOCX i XLSX do 10 MB trafiaja na prywatny dysk `local`. Pobieranie wymaga prawa odczytu kwalifikacji, usuwanie prawa edycji; test IDOR blokuje obcego Sales.
+
+Audit log obejmuje utworzenie, start, oczekiwanie, wznowienie, zmiane odpowiedzi, zakonczenie, gotowosc do wyceny, anulowanie oraz dodanie i usuniecie pliku. Dlugie odpowiedzi nie sa zapisywane w calosci w metadanych.
+
+### Ograniczenia Etapu 2B
+
+- Kalkulator cen i model wyceny zostaly dodane w Etapie 2C.
+- Brak integracji kwalifikacji z `Audit`.
+- Brak autosave i Livewire; odpowiedzi sa zapisywane pojedynczym formularzem.
+- Brak AI, wysylki plikow do AI i automatycznego generowania zakresu przez model.
+- Brak klientowskiego formularza samoobslugowego oraz powiadomien o oczekiwaniu.
+
+### Wyniki walidacji Etapu 2B
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 34 migracje i seeder |
+| `php artisan test` | PASS: 132 testy, 607 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+
+## 23. Etap 2C - silnik wyceny
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2C dodaje wersjonowane wyceny audytu tworzone z kwalifikacji `ready_for_pricing`. Nie tworzy jeszcze audytu technicznego, zamowienia ani dokumentu ofertowego.
+
+### Modele i migracje
+
+- `PricingRule` definiuje wersjonowana, niemodyfikowalna po publikacji regule przypisana do `AuditTypeVersion`.
+- `Quotation` przechowuje numer `AUD/RRRR/NNNN`, wersje wyceny, status, godziny, stawki, rabat, VAT, ceny i snapshot kalkulacji.
+- `QuotationLine` zapisuje kazda pozycje godzinowa lub cenowa wraz ze zrodlem, iloscia i kategoria.
+- `QuotationOverride` tworzy niezmienny dziennik kontrolowanych korekt wraz z uzytkownikiem i wymaganym powodem.
+- `QuotationStatus` definiuje statusy od `draft` i `calculated` do akceptacji, odrzucenia, wygasniecia albo anulowania.
+- Osobna tabela `quotation_sequences` zapewnia transakcyjnie bezpieczna numeracje roczna.
+- `AuditTypeVersion` otrzymal domyslna stawke, minima godzin i ceny, rezerwe, liczbe inzynierow, VAT i okres waznosci.
+
+### Reguly i snapshot
+
+Reguly obsluguja typy `always`, `answer_exists`, porownania odpowiedzi, `answer_contains` i `module_active`. Kalkulacja obsluguje stale godziny i ceny, wartosci na jednostke, laczne godziny i cene oraz procent godzin lub ceny.
+
+Ilosc moze pochodzic z `answer:{question_code}`, stalej, liczby lokalizacji albo liczby aktywnych modulow Sales. Reguly sa dodawane w Filament wylacznie do wersji roboczej i trafiaja do `AuditTypeVersion::snapshot()` oraz snapshotu kwalifikacji.
+
+### Kolejnosc kalkulacji
+
+`QuotationCalculationService` wykonuje operacje poza kontrolerem i korzysta z BCMath. Wszystkie godziny, stawki i ceny sa zaokraglane do dwoch miejsc bez uzywania `float`.
+
+1. Ocenia warunki regul i pobiera ilosci.
+2. Tworzy pozycje godzinowe oraz cenowe.
+3. Stosuje rezerwe i minimum godzin.
+4. Wycenia godziny wedlug stawki i dodaje pozycje cenowe.
+5. Stosuje minimum ceny i koszty dodatkowe.
+6. Oblicza rabat procentowy albo kwotowy.
+7. Oblicza VAT oraz kwote brutto.
+8. Zapisuje oryginalny `calculation_snapshot` i wynik koncowy.
+
+Nowa kalkulacja tej samej kwalifikacji tworzy kolejna wersje `Quotation` i oznacza poprzednia jako nieaktualna.
+
+### Korekty i akceptacja
+
+Sales moze korygowac wlasna wycene w statusie `calculated` albo `internal_review`. Global Admin i Super Admin moga korygowac wszystkie. Zmieniane moga byc stawka, liczba inzynierow, dodatkowe godziny i koszty, rabat, waznosc, zalozenia i wylaczenia. Kazda zmiana wymaga powodu, tworzy `QuotationOverride`, przelicza wynik oraz aktualizuje `final_calculation_snapshot` bez zmiany snapshotu oryginalnego.
+
+`QuotationWorkflowService` kontroluje przejscia w transakcji i z blokada rekordu:
+
+- `calculated -> internal_review` - Sales lub administrator,
+- `internal_review -> internally_approved` - Technical Lead lub administrator,
+- `internal_review -> calculated` - wymagany komentarz,
+- `internally_approved -> sent_to_client` - Sales owner lub administrator,
+- `sent_to_client -> accepted` - osoba akceptujaca, data i opcjonalny numer zamowienia,
+- `sent_to_client -> rejected` - wymagany powod,
+- `sent_to_client -> expired` - dopiero po `valid_until`,
+- aktywne statusy przed wysylka moga przejsc do `cancelled` z powodem.
+
+Technical Lead widzi wszystkie wyceny i moze je zatwierdzac, ale nie moze zmieniac cen. Auditor i Client nie maja dostepu.
+
+### Audit trail i dane demonstracyjne
+
+Audit log obejmuje utworzenie, kalkulacje, korekty, wyslanie do weryfikacji, cofniecie, akceptacje wewnetrzna, wyslanie klientowi, decyzje klienta, wygasniecie i anulowanie. Metadane zawieraja identyfikatory, statusy i podsumowanie kwotowe bez pelnych notatek klienta.
+
+Seeder tworzy demonstracyjny typ `AUD-DEMO-2C` z regułami: 4 h bazowe, 0,15 h na uzytkownika, 0,10 h na komputer, 1,5 h na serwer, 2 h na lokalizacje, 3 h raportu, 2 h weryfikacji, 15% rezerwy i minimum 12 h. Wartosc jest jawnie oznaczona jako demonstracyjna.
+
+### Ograniczenia Etapu 2C
+
+- Brak `AuditOrder` i automatycznego tworzenia audytu technicznego po akceptacji.
+- Brak PDF/DOCX oferty i podpisu elektronicznego.
+- Brak integracji CRM, ClickUp, poczty i OpenAI.
+- Akceptacja klienta jest rejestrowana przez uprawnionego pracownika, bez samoobslugi klienta.
+- Wewnetrzna akceptacja ma jeden krok; model dat i aktorow pozwala rozbudowac ja o osobne zatwierdzenie techniczne i finansowe.
+- Srodowisko PHP musi miec rozszerzenie `ext-bcmath`.
+- `composer audit` wskazuje cztery advisory o sredniej wadze dla istniejacego `guzzlehttp/guzzle <7.15.1`; aktualizacja zaleznosci wymaga osobnego zadania i regresji.
+
+### Wyniki walidacji Etapu 2C
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 39 migracji i seeder demonstracyjny 2C |
+| `php artisan test` | PASS: 151 testow, 681 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list --path=sales/quotations` | PASS: 11 tras wycen |
+
+## 24. Etap 2D - zlecenie audytu i planowanie Delivery
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2D wprowadza operacyjne zlecenie audytu tworzone z aktualnej, zaakceptowanej wyceny. Zlecenie zamraza dane z kwalifikacji, finalna wycene oraz konkretna wersje konfiguracji technicznej, ale celowo nie tworzy jeszcze instancji technicznego modelu `Audit`.
+
+### Dane i snapshot
+
+- `AuditOrder` ma transakcyjnie bezpieczny numer `AUD-ZL/RRRR/NNNN`, unikalne powiazanie z wycena, klienta, lokalizacje, wersje typu audytu, plan godzin i terminow oraz wlascicieli Sales i Delivery.
+- `source_snapshot` przechowuje kwalifikacje, odpowiedzi, zaakceptowana wycene, pozycje kalkulacji i historie korekt.
+- `configuration_snapshot` pochodzi z dokladnie tej `AuditTypeVersion`, ktora byla podstawa zaakceptowanej wyceny. Obejmuje parametry, moduly techniczne, kontrole, instrukcje Delivery, kompetencje, czasy i konfiguracje AI, ale nie uruchamia AI.
+- Jedna wycena moze utworzyc tylko jedno zlecenie. Operacja sprawdza status `accepted`, flage `is_current`, uprawnienia i blokuje rekord wyceny w transakcji.
+- Utworzenie zlecenia nie tworzy rekordu w tabeli `audits`; nastapi to dopiero w Etapie 3A.
+
+### Planowanie Delivery
+
+- `AuditOrderAssignee` obsluguje role: wlasciciel Delivery, lider techniczny, audytor, inzynier wspierajacy i obserwator. Przechowuje planowane godziny oraz snapshot kompetencji.
+- `CompetencyLevel::meets()` porownuje poziomy Junior, Regular, Senior, Specjalista i Lider techniczny. Poziom mozna ustawic tylko dla roli Auditor albo Technical Lead; przypisanie ponizej minimum generuje ostrzezenie i pozostaje widocznym blokerem.
+- Kazde zlecenie otrzymuje 12 wymaganych pozycji checklisty dotyczacych zakresu, zespolu, terminu, dostepow, dokumentow, narzedzi i kontaktu z klientem.
+- Dokumenty kwalifikacji sa referencjami do istniejacych prywatnych plikow, bez kopiowania. Delivery moze dodac wlasne dokumenty do 20 MB; pobieranie i usuwanie chronia Policies oraz kontrola przynaleznosci rekordu.
+
+### Statusy i gotowosc
+
+`AuditOrderStatus` definiuje `draft`, `awaiting_planning`, `planning`, `awaiting_access`, `ready`, `scheduled`, `in_progress` i `cancelled`. `AuditOrderWorkflowService` jest jedynym miejscem przejsc statusow. Etap 2D konczy sie na `in_progress`.
+
+Przejscie do `ready` albo `scheduled` wymaga wlasciciela Delivery, lidera technicznego, audytora lub inzyniera wspierajacego, terminu, dodatnich planowanych godzin, zakonczonej wymaganej checklisty oraz przynajmniej jednej osoby spelniajacej minimalny poziom kompetencji. Anulowanie wymaga powodu, a historyczny termin planowania wymaga uzasadnienia.
+
+### Uprawnienia, audit trail i powiadomienia
+
+- Technical Lead, Global Admin i Super Admin planuja zespol, checklisty, dokumenty i statusy.
+- Auditor widzi tylko zlecenia, do ktorych jest przypisany, bez prawa planowania.
+- Sales widzi status i szczegoly tylko swoich zlecen oraz moze utworzyc zlecenie ze swojej zaakceptowanej wyceny.
+- Client nie ma dostepu do modulu Delivery.
+- Audit log obejmuje utworzenie i snapshot zlecenia, planowanie, zmiane terminu, przypisania, checklisty, dokumenty i zmiany statusu.
+- Istniejacy system `AuditNotification` zostal rozszerzony o opcjonalne `audit_order_id`. Powiadamia przypisana osobe, Sales po gotowosci i zmianie terminu oraz liderow o blokerach.
+
+### Ograniczenia Etapu 2D
+
+- Brak utworzenia technicznego `Audit`, kopiowania kontroli do realizacji i mapowania odpowiedzi; to zakres Etapu 3A.
+- Brak integracji kalendarza, CRM, ClickUp, poczty i OpenAI.
+- Ostrzezenie o niedostatecznej kompetencji nie blokuje samego przypisania, ale blokuje gotowosc, dopoki w zespole nie ma osoby spelniajacej minimum.
+- Pliki zrodlowe pozostaja w prywatnym storage kwalifikacji; zlecenie przechowuje kontrolowana referencje, nie druga kopie.
+
+### Wyniki walidacji Etapu 2D
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 44 migracje i seeder demonstracyjny |
+| `php artisan test` | PASS: 163 testy, 721 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list --path=delivery/audit-orders` | PASS: 10 tras Delivery |
+
+## 25. Etap 3A - techniczna realizacja audytu
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 3A dodaje prowadzony proces techniczny 2.0 pod `/engineer`, pozostawiajac stary model `Audit` i `/auditor` bez zmian. Przejscie zlecenia `scheduled -> in_progress` atomowo tworzy `TechnicalAudit` ze snapshotu zlecenia, a nie z aktualnego stanu biblioteki.
+
+### Modele i utworzenie audytu
+
+- `TechnicalAudit` przechowuje numer `AUD-TECH/RRRR/NNNN`, snapshoty, lidera, liczniki i status workflow.
+- `TechnicalAuditModule` oraz `TechnicalAuditControl` sa kopiami aktywnych modulow i kontroli ze snapshotu `AuditOrder`. Zachowuja kolejnosc, instrukcje, wymagania, kryteria i referencje standardow.
+- `TechnicalAuditAnswer` przechowuje typowana odpowiedz, wynik, komentarz, N/D, proponowane ryzyko i rekomendacje, deklaracje klienta oraz poziom pewnosci.
+- `TechnicalAuditEvidence` zapisuje prywatny plik i metadane. `EvidenceScanner` jest interfejsem dla przyszlego skanowania; obecny `NullEvidenceScanner` jawnie ustawia `not_scanned` i nie udaje ochrony antywirusowej.
+- `TechnicalAuditEscalation` obsluguje pytania, priorytety, przypisanie, odpowiedz i rozwiazanie przez lidera.
+- `TechnicalAuditCreationService` blokuje zlecenie w transakcji, generuje numer, kopiuje snapshot, rozdziela kontrole pomiedzy przypisanych inzynierow, aktualizuje zlecenie i wysyla powiadomienia. Unikalny `audit_order_id` oraz kontrola serwisu zapobiegaja duplikatom.
+
+### Praca inzyniera i kompletność
+
+`UpdateTechnicalAuditAnswerRequest` waliduje wartosc wedlug `field_type` zapisanego w kontroli. Zapis roboczy pozostawia kontrole `in_progress`. Zakonczenie wymaga wyniku, wymaganej odpowiedzi i dowodu, komentarza dla niezgodnosci albo braku weryfikacji, rekomendacji dla wysokiego lub krytycznego ryzyka oraz zrodla deklaracji klienta. N/D respektuje ustawienia snapshotu i wymagane uzasadnienie.
+
+`TechnicalAuditProgressService` po zmianie odpowiedzi, dowodu lub eskalacji przelicza postep kontroli, modulu i calego audytu. Nieaktywne kontrole nie sa liczone. Kontrole zablokowane, wymagajace konsultacji, bez wymaganych dowodow lub niekompletne blokuja wyslanie.
+
+Interfejs pokazuje zakres sprzedazowy, plan Delivery, zespol, instrukcje, kryteria, dowody, eskalacje, postep oraz przejscie do kolejnej lub kolejnej brakujacej kontroli.
+
+### Workflow i weryfikacja lidera
+
+`TechnicalAuditWorkflowService` kontroluje przejscia przez `in_progress`, `waiting_for_client`, `blocked`, `ready_for_submission`, `submitted_for_review`, `changes_requested`, `technically_approved` i `cancelled`. Gotowosc i zatwierdzenie wymagaja kompletnych kontroli, dowodow oraz braku blokad i otwartych krytycznych eskalacji.
+
+Kolejka `/technical-review/audits` udostepnia liderowi moduly, odpowiedzi, dowody, ryzyka, rekomendacje, deklaracje klienta i eskalacje. Lider moze zapisac korekte odpowiedzi, oznaczyc kontrole do poprawy, zwrocic caly audyt albo zatwierdzic go technicznie. Model `Finding` nie jest jeszcze tworzony.
+
+### Uprawnienia, audit trail i powiadomienia
+
+- Auditor widzi i edytuje tylko audyt przypisany przez zlecenie.
+- Technical Lead, Global Admin i Super Admin widza wszystkie audyty, eskalacje i weryfikacje.
+- Sales widzi tylko status i postep w karcie wlasnego zlecenia, bez dostepu do odpowiedzi, dowodow i komentarzy.
+- Client nie ma dostepu do procesu technicznego.
+- Audit trail obejmuje utworzenie, start, odpowiedzi, zakonczenie i blokady kontroli, dowody, eskalacje oraz wszystkie kluczowe przejscia audytu. Metadane nie zawieraja tresci plikow ani dlugich odpowiedzi.
+- Powiadomienia trafiaja do inzynierow po starcie, lidera po eskalacji i wyslaniu, audytora po odpowiedzi lub zwrocie oraz Sales i Delivery po zatwierdzeniu technicznym.
+
+### Ograniczenia Etapu 3A
+
+- Brak modelu `Finding`, finalnej analizy ryzyka i workflow 3B.
+- Brak OpenAI, nowych raportow, e-maili i portalu klienta 2.0.
+- Adapter antywirusowy jest przygotowany, ale pliki maja jawny status `not_scanned`.
+- Weryfikacja lidera zapisuje korekty w odpowiedzi technicznej; osobna historia recenzji kontroli moze zostac dodana wraz z Findings.
+- Stary `Audit` oraz wszystkie ekrany MVP dzialaja rownolegle i nie sa automatycznie migrowane.
+
+### Wyniki walidacji Etapu 3A
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 50 migracji i seeder demonstracyjny |
+| `php artisan test` | PASS: 176 testow, 779 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list --path=engineer` | PASS: 13 tras |
+| `php artisan route:list --path=technical-review` | PASS: 4 trasy |

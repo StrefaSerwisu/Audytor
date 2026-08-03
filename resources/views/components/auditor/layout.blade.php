@@ -248,6 +248,12 @@
             background: var(--primary-dark);
         }
 
+        button:disabled,
+        .button.disabled {
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
         label {
             display: grid;
             gap: 6px;
@@ -367,7 +373,7 @@
         {{ $slot }}
     @else
         <header class="topbar">
-            <a class="brand" href="{{ route('auditor.index') }}" style="text-decoration: none;">
+            <a class="brand" href="{{ auth()->user()?->hasRole(\App\Enums\UserRole::Sales) ? route('sales.qualifications.index') : route('auditor.index') }}" style="text-decoration: none;">
                 <strong>Audytor IT</strong>
                 <span>Global IT</span>
             </a>
@@ -391,7 +397,18 @@
                         <a class="button secondary" href="{{ route('reports.exports.index') }}">Eksporty</a>
                     @endif
                     @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Sales))
+                        <a class="button secondary" href="{{ route('sales.qualifications.index') }}">Kwalifikacje Sales</a>
+                        <a class="button secondary" href="{{ route('sales.quotations.index') }}">Wyceny</a>
                         <a class="button secondary" href="{{ route('follow-ups.index') }}">Follow-up</a>
+                    @endif
+                    @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Auditor, \App\Enums\UserRole::Sales))
+                        <a class="button secondary" href="{{ route('delivery.audit-orders.index') }}">Zlecenia</a>
+                    @endif
+                    @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Auditor))
+                        <a class="button secondary" href="{{ route('engineer.audits.index') }}">Audyty 2.0</a>
+                    @endif
+                    @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead))
+                        <a class="button secondary" href="{{ route('technical-review.audits.index') }}">Weryfikacja 2.0</a>
                     @endif
                 @endauth
                 <div id="network" class="network">

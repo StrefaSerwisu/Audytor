@@ -34,7 +34,7 @@ Glowna idea: administrator definiuje biblioteke audytu, audytor wypelnia checkli
 
 Projekt jest funkcjonalnym MVP. Ma zaimplementowany przeplyw od przygotowania audytu do publikacji raportu klientowi i follow-up. Testy feature pokrywaja najwazniejsze sciezki biznesowe.
 
-Stan po ponownej analizie 2026-08-01:
+Stan po ponownej analizie 2026-08-03:
 
 - Backend: Laravel 12, PHP 8.2+, PostgreSQL w `.env.example`, SQLite in-memory w testach.
 - Panel admina: Filament 4 pod `/admin`.
@@ -42,8 +42,9 @@ Stan po ponownej analizie 2026-08-01:
 - Brak publicznego JSON API. Aplikacja dziala przez web routes i formularze Blade/Filament.
 - Raporty PDF/DOCX sa generowane prostymi lokalnymi generatorami, nie przez zewnetrzny silnik DTP.
 - Offline jest czesciowy: zapisy robocze trafiaja do IndexedDB, ale nie ma pelnej synchronizacji odpowiedzi z serwerem po reconnect.
-- Repo wymaga ustalenia baseline w Git: lokalny `git status --short` pokazuje praktycznie caly projekt jako niezatwierdzony.
-- Najwazniejsze braki przed dalszym rozwojem: CRUD uzytkownikow, finalne raporty PDF/DOCX, UAT biblioteki pytan, decyzja o offline/sync, uporzadkowanie policies.
+- Baseline Git istnieje, Etap 1A jest na `main`, a Etap 1B powstaje na osobnej galezi.
+- Etapy 1A/1B dodaly role, Policies, User CRUD, centralny audit trail i Form Requests.
+- Najwazniejsze braki przed dalszym rozwojem: centralny workflow statusow, finalne raporty PDF/DOCX, UAT biblioteki pytan i decyzja o offline/sync.
 
 ## Najwazniejsze adresy lokalne
 

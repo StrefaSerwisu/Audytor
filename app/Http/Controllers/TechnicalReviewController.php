@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ApproveAuditRequest;
+use App\Http\Requests\RequestAuditChangesRequest;
 use App\Models\Audit;
 use App\Models\AuditAnswer;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\AuditNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -58,7 +61,7 @@ class TechnicalReviewController extends Controller
         ]);
     }
 
-    public function approve(Request $request, Audit $audit): RedirectResponse
+    public function approve(ApproveAuditRequest $request, Audit $audit): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -66,9 +69,7 @@ class TechnicalReviewController extends Controller
         abort_unless($user->can('review', $audit), 403);
         $this->ensureSubmittedForReview($audit);
 
-        $validated = $request->validate([
-            'notes' => ['nullable', 'string', 'max:5000'],
-        ]);
+        $validated = $request->validated();
 
         $audit->reviews()->create([
             'reviewer_id' => $user->id,
@@ -76,10 +77,19 @@ class TechnicalReviewController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        $oldStatus = $audit->status;
+
         $audit->forceFill([
             'status' => 'technically_approved',
             'approved_at' => now(),
         ])->save();
+
+        AuditLogService::record(
+            'audit.technically_approved',
+            $audit,
+            oldValues: ['status' => $oldStatus],
+            newValues: ['status' => $audit->status, 'notes' => $validated['notes'] ?? null],
+        );
 
         AuditNotifier::notifyAssignees(
             $audit,
@@ -94,7 +104,7 @@ class TechnicalReviewController extends Controller
             ->with('status', 'Audyt zatwierdzony technicznie.');
     }
 
-    public function requestChanges(Request $request, Audit $audit): RedirectResponse
+    public function requestChanges(RequestAuditChangesRequest $request, Audit $audit): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -102,9 +112,7 @@ class TechnicalReviewController extends Controller
         abort_unless($user->can('review', $audit), 403);
         $this->ensureSubmittedForReview($audit);
 
-        $validated = $request->validate([
-            'notes' => ['required', 'string', 'min:10', 'max:5000'],
-        ]);
+        $validated = $request->validated();
 
         $audit->reviews()->create([
             'reviewer_id' => $user->id,
@@ -112,10 +120,19 @@ class TechnicalReviewController extends Controller
             'notes' => $validated['notes'],
         ]);
 
+        $oldStatus = $audit->status;
+
         $audit->forceFill([
             'status' => 'changes_requested',
             'approved_at' => null,
         ])->save();
+
+        AuditLogService::record(
+            'audit.changes_requested',
+            $audit,
+            oldValues: ['status' => $oldStatus],
+            newValues: ['status' => $audit->status, 'notes' => $validated['notes']],
+        );
 
         AuditNotifier::notifyAssignees(
             $audit,

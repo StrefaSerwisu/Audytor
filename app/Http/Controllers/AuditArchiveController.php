@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CloseAuditRequest;
 use App\Models\Audit;
 use App\Models\AuditAnswer;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\AuditNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,7 +99,7 @@ class AuditArchiveController extends Controller
         ]);
     }
 
-    public function close(Request $request, Audit $audit): RedirectResponse
+    public function close(CloseAuditRequest $request, Audit $audit): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -105,9 +107,7 @@ class AuditArchiveController extends Controller
         abort_unless($user->can('close', $audit), 403);
         abort_unless($audit->status === 'published_to_client', 409);
 
-        $validated = $request->validate([
-            'notes' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $validated = $request->validated();
 
         $audit->closures()->create([
             'closed_by' => $user->id,
@@ -115,10 +115,19 @@ class AuditArchiveController extends Controller
             'closed_at' => now(),
         ]);
 
+        $oldStatus = $audit->status;
+
         $audit->forceFill([
             'status' => 'closed',
             'completed_at' => now(),
         ])->save();
+
+        AuditLogService::record(
+            'audit.closed',
+            $audit,
+            oldValues: ['status' => $oldStatus],
+            newValues: ['status' => $audit->status, 'notes' => $validated['notes'] ?? null],
+        );
 
         AuditNotifier::notifyAssignees(
             $audit,

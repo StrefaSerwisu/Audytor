@@ -5,12 +5,19 @@ use App\Http\Controllers\AuditDashboardController;
 use App\Http\Controllers\AuditNotificationController;
 use App\Http\Controllers\AuditorAuditController;
 use App\Http\Controllers\AuditorAuthController;
+use App\Http\Controllers\AuditOrderController;
 use App\Http\Controllers\AuditReportController;
 use App\Http\Controllers\ClientPortalAuthController;
 use App\Http\Controllers\ClientPortalController;
 use App\Http\Controllers\ClientReportController;
+use App\Http\Controllers\EngineerAuditController;
 use App\Http\Controllers\FollowUpTaskController;
+use App\Http\Controllers\QualificationAttachmentController;
+use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\SalesQualificationController;
+use App\Http\Controllers\TechnicalAuditEscalationController;
+use App\Http\Controllers\TechnicalAuditReviewController;
 use App\Http\Controllers\TechnicalReviewController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,9 +25,13 @@ Route::redirect('/', '/auditor');
 
 Route::middleware('guest')->group(function () {
     Route::get('/auditor/login', [AuditorAuthController::class, 'create'])->name('login');
-    Route::post('/auditor/login', [AuditorAuthController::class, 'store'])->name('auditor.login.store');
+    Route::post('/auditor/login', [AuditorAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('auditor.login.store');
     Route::get('/client/login', [ClientPortalAuthController::class, 'create'])->name('client.login');
-    Route::post('/client/login', [ClientPortalAuthController::class, 'store'])->name('client.login.store');
+    Route::post('/client/login', [ClientPortalAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('client.login.store');
 });
 
 Route::post('/auditor/logout', [AuditorAuthController::class, 'destroy'])
@@ -104,6 +115,79 @@ Route::middleware('auth')->prefix('archive')->name('archive.')
         Route::get('/export', [AuditArchiveController::class, 'export'])->name('export');
         Route::get('/audits/{audit}', [AuditArchiveController::class, 'show'])->name('show');
     });
+
+Route::middleware('auth')->prefix('sales/qualifications')->name('sales.qualifications.')
+    ->middleware('role:sales,technical_lead,global_admin,super_admin')
+    ->group(function () {
+        Route::get('/', [SalesQualificationController::class, 'index'])->name('index');
+        Route::get('/create', [SalesQualificationController::class, 'create'])->name('create');
+        Route::post('/', [SalesQualificationController::class, 'store'])->name('store');
+        Route::get('/{qualification}', [SalesQualificationController::class, 'show'])->name('show');
+        Route::post('/{qualification}/answers/{questionCode}', [SalesQualificationController::class, 'updateAnswer'])->name('answers.update');
+        Route::post('/{qualification}/start', [SalesQualificationController::class, 'start'])->name('start');
+        Route::post('/{qualification}/wait', [SalesQualificationController::class, 'waitForClient'])->name('wait');
+        Route::post('/{qualification}/resume', [SalesQualificationController::class, 'resume'])->name('resume');
+        Route::post('/{qualification}/complete', [SalesQualificationController::class, 'complete'])->name('complete');
+        Route::post('/{qualification}/cancel', [SalesQualificationController::class, 'cancel'])->name('cancel');
+        Route::post('/{qualification}/quotation', [QuotationController::class, 'store'])->name('quotation.store');
+        Route::get('/attachments/{attachment}/download', [QualificationAttachmentController::class, 'download'])->name('attachments.download');
+        Route::delete('/attachments/{attachment}', [QualificationAttachmentController::class, 'destroy'])->name('attachments.destroy');
+    });
+
+Route::middleware('auth')->prefix('sales/quotations')->name('sales.quotations.')
+    ->middleware('role:sales,technical_lead,global_admin,super_admin')
+    ->group(function () {
+        Route::get('/', [QuotationController::class, 'index'])->name('index');
+        Route::get('/{quotation}', [QuotationController::class, 'show'])->name('show');
+        Route::patch('/{quotation}/override', [QuotationController::class, 'override'])->name('override');
+        Route::post('/{quotation}/review', [QuotationController::class, 'review'])->name('review');
+        Route::post('/{quotation}/approve', [QuotationController::class, 'approve'])->name('approve');
+        Route::post('/{quotation}/return', [QuotationController::class, 'returnForChanges'])->name('return');
+        Route::post('/{quotation}/send', [QuotationController::class, 'send'])->name('send');
+        Route::post('/{quotation}/accept', [QuotationController::class, 'accept'])->name('accept');
+        Route::post('/{quotation}/reject', [QuotationController::class, 'reject'])->name('reject');
+        Route::post('/{quotation}/expire', [QuotationController::class, 'expire'])->name('expire');
+        Route::post('/{quotation}/cancel', [QuotationController::class, 'cancel'])->name('cancel');
+        Route::post('/{quotation}/audit-order', [AuditOrderController::class, 'store'])->name('audit-order.store');
+    });
+
+Route::middleware('auth')->prefix('delivery/audit-orders')->name('delivery.audit-orders.')
+    ->middleware('role:sales,auditor,technical_lead,global_admin,super_admin')
+    ->group(function () {
+        Route::get('/', [AuditOrderController::class, 'index'])->name('index');
+        Route::get('/{auditOrder}', [AuditOrderController::class, 'show'])->name('show');
+        Route::patch('/{auditOrder}/plan', [AuditOrderController::class, 'updatePlan'])->name('plan');
+        Route::post('/{auditOrder}/assignees', [AuditOrderController::class, 'assign'])->name('assignees.store');
+        Route::delete('/{auditOrder}/assignees/{assignee}', [AuditOrderController::class, 'unassign'])->name('assignees.destroy');
+        Route::patch('/{auditOrder}/preparation/{item}', [AuditOrderController::class, 'updatePreparation'])->name('preparation.update');
+        Route::post('/{auditOrder}/documents', [AuditOrderController::class, 'uploadDocument'])->name('documents.store');
+        Route::get('/{auditOrder}/documents/{document}', [AuditOrderController::class, 'downloadDocument'])->name('documents.download');
+        Route::delete('/{auditOrder}/documents/{document}', [AuditOrderController::class, 'deleteDocument'])->name('documents.destroy');
+        Route::post('/{auditOrder}/status/{status}', [AuditOrderController::class, 'transition'])->name('transition');
+    });
+
+Route::middleware('auth')->prefix('engineer')->name('engineer.')->middleware('role:auditor,technical_lead,global_admin,super_admin')->group(function () {
+    Route::get('/audits', [EngineerAuditController::class, 'index'])->name('audits.index');
+    Route::get('/audits/{technicalAudit}', [EngineerAuditController::class, 'show'])->name('audits.show');
+    Route::get('/audits/{technicalAudit}/modules/{module}', [EngineerAuditController::class, 'module'])->name('modules.show');
+    Route::get('/audits/{technicalAudit}/controls/{control}', [EngineerAuditController::class, 'control'])->name('controls.show');
+    Route::patch('/audits/{technicalAudit}/controls/{control}/answer', [EngineerAuditController::class, 'answer'])->name('answers.update');
+    Route::post('/audits/{technicalAudit}/controls/{control}/status/{status}', [EngineerAuditController::class, 'controlStatus'])->name('controls.status');
+    Route::post('/audits/{technicalAudit}/controls/{control}/evidence', [EngineerAuditController::class, 'uploadEvidence'])->name('evidence.store');
+    Route::get('/audits/{technicalAudit}/evidence/{evidence}', [EngineerAuditController::class, 'downloadEvidence'])->name('evidence.download');
+    Route::delete('/audits/{technicalAudit}/evidence/{evidence}', [EngineerAuditController::class, 'deleteEvidence'])->name('evidence.destroy');
+    Route::post('/audits/{technicalAudit}/status/{status}', [EngineerAuditController::class, 'transition'])->name('audits.transition');
+    Route::get('/escalations', [TechnicalAuditEscalationController::class, 'index'])->name('escalations.index');
+    Route::post('/audits/{technicalAudit}/controls/{control}/escalations', [TechnicalAuditEscalationController::class, 'store'])->name('escalations.store');
+    Route::patch('/escalations/{escalation}', [TechnicalAuditEscalationController::class, 'respond'])->name('escalations.respond');
+});
+
+Route::middleware('auth')->prefix('technical-review')->name('technical-review.')->middleware('role:technical_lead,global_admin,super_admin')->group(function () {
+    Route::get('/audits', [TechnicalAuditReviewController::class, 'index'])->name('audits.index');
+    Route::get('/audits/{technicalAudit}', [TechnicalAuditReviewController::class, 'show'])->name('audits.show');
+    Route::patch('/audits/{technicalAudit}/controls/{control}', [TechnicalAuditReviewController::class, 'control'])->name('controls.update');
+    Route::post('/audits/{technicalAudit}/status/{status}', [TechnicalAuditReviewController::class, 'transition'])->name('audits.transition');
+});
 
 Route::middleware('auth')->prefix('client/portal')->name('client.portal.')
     ->middleware('role:client')
