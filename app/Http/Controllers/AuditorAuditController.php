@@ -8,8 +8,8 @@ use App\Models\AuditAnswer;
 use App\Models\AuditAnswerAttachment;
 use App\Models\AuditQuestion;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\AuditNotifier;
-use App\Support\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -180,7 +180,7 @@ class AuditorAuditController extends Controller
             'submitted_at' => now(),
         ])->save();
 
-        AuditTrail::record(
+        AuditLogService::record(
             'audit.submitted_for_review',
             $audit,
             oldValues: ['status' => $oldStatus],
@@ -210,7 +210,7 @@ class AuditorAuditController extends Controller
         abort_unless($user->can('download', $attachment), 403);
         abort_unless(Storage::disk($attachment->disk)->exists($attachment->path), 404);
 
-        AuditTrail::record('evidence.downloaded', $attachment, metadata: [
+        AuditLogService::record('evidence.downloaded', $attachment, metadata: [
             'audit_id' => $audit->id,
             'original_name' => $attachment->original_name,
         ]);
@@ -231,7 +231,7 @@ class AuditorAuditController extends Controller
         $answer = $attachment->answer;
         $question = $attachment->question;
 
-        AuditTrail::record('evidence.deleted', $attachment, oldValues: [
+        AuditLogService::record('evidence.deleted', $attachment, oldValues: [
             'audit_id' => $audit->id,
             'original_name' => $attachment->original_name,
             'mime_type' => $attachment->mime_type,

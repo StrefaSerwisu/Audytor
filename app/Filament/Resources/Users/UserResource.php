@@ -21,6 +21,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 use UnitEnum;
 
 class UserResource extends Resource
@@ -110,7 +111,8 @@ class UserResource extends Resource
                 ]),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->mutateDataUsing(fn (array $data): array => self::prepareFormData($data)),
                 DeleteAction::make()
                     ->visible(fn (User $record): bool => auth()->user()?->can('delete', $record) ?? false),
             ]);
@@ -126,6 +128,29 @@ class UserResource extends Resource
         }
 
         return $options;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function prepareFormData(array $data): array
+    {
+        if (blank($data['password'] ?? null)) {
+            unset($data['password']);
+        }
+
+        if (($data['role'] ?? null) !== UserRole::Client->value) {
+            $data['client_id'] = null;
+        }
+
+        if (($data['role'] ?? null) === UserRole::Client->value && blank($data['client_id'] ?? null)) {
+            throw ValidationException::withMessages([
+                'client_id' => 'Konto klienta musi byc przypisane do klienta.',
+            ]);
+        }
+
+        return $data;
     }
 
     /** @return array<string, string> */

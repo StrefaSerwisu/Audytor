@@ -18,9 +18,13 @@ Route::redirect('/', '/auditor');
 
 Route::middleware('guest')->group(function () {
     Route::get('/auditor/login', [AuditorAuthController::class, 'create'])->name('login');
-    Route::post('/auditor/login', [AuditorAuthController::class, 'store'])->name('auditor.login.store');
+    Route::post('/auditor/login', [AuditorAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('auditor.login.store');
     Route::get('/client/login', [ClientPortalAuthController::class, 'create'])->name('client.login');
-    Route::post('/client/login', [ClientPortalAuthController::class, 'store'])->name('client.login.store');
+    Route::post('/client/login', [ClientPortalAuthController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('client.login.store');
 });
 
 Route::post('/auditor/logout', [AuditorAuthController::class, 'destroy'])

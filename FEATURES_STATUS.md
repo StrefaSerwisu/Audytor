@@ -19,6 +19,7 @@ Legenda:
 | Administracja uzytkownikami | Dziala | `UserResource` pozwala tworzyc i edytowac konta, role, aktywnosc i przypisanie klienta. Global Admin nie moze nadawac roli Super Admin, a uzytkownik nie moze zdezaktywowac wlasnego konta. | Produkcyjnie warto dodac reset hasla mailem i uniewaznianie aktywnych sesji po dezaktywacji. |
 | Centralny audit trail | Dziala | `audit_logs`, centralna usluga, dziennik Filament oraz logowanie zmian kont, dowodow i kluczowych akcji workflow. | Brak polityki retencji, eksportu i osobnego logu wejsc przez publiczny token klienta. |
 | Form Requests | Dziala | Kluczowe akcje zapisu korzystaja z dedykowanych klas walidacji. | Filtry list pozostaja walidowane lokalnie w kontrolerach. |
+| Rate limiting logowania | Dziala | Logowanie audytora i klienta ma limit 5 prob na minute dla kombinacji e-mail + IP. Udane, nieudane i odrzucone logowania sa audytowane. | Filament stosuje wlasne zabezpieczenie logowania; docelowe limity produkcyjne wymagaja monitoringu. |
 | Klienci i lokalizacje | Dziala | Modele, migracje, relacje, CRUD, seed danych. | Brak importu/eksportu klientow. |
 | Biblioteka audytu | Dziala | Szablony, moduly, pytania, typy pol, wymagane dowody, N/D, ryzyko, rekomendacje. | Brak wersjonowania szablonow i pytan. |
 | Seeder biblioteki | Dziala | 5 modulow i pytania dla kazdego; testy pilnuja liczby pytan. | Dane sa demonstracyjne, wymagaja UAT merytorycznego. |
@@ -43,7 +44,7 @@ Legenda:
 | PWA | Czesciowo dziala | Manifest, service worker, offline fallback, cache podstawowych adresow. | Brak pelnego testu install/offline na realnym urzadzeniu. |
 | Offline draft | Czesciowo dziala | Formularze audytora zapisuja draft do IndexedDB. | Brak pelnej synchronizacji draftow do backendu po online. |
 | CSV export | Dziala | Dashboard, archiwum, follow-up. | Brak XLSX. |
-| Testy automatyczne | Dziala | Feature tests pokrywaja glowne workflow, role, User CRUD i audit trail; Etap 1B: 88 testow. | Brak stalego zestawu testow browser/E2E. |
+| Testy automatyczne | Dziala | Feature tests pokrywaja glowne workflow, role, User CRUD, audit trail i rate limiting; Etap 1B: 94 testy. | Brak stalego zestawu testow browser/E2E. |
 | Build frontend | Dziala | Vite build przechodzi; frontend to glownie Blade/Filament. | Build nalezy uruchamiac po zmianach CSS/JS. |
 | Produkcyjne wdrozenie | Czesciowo dziala | Checklisty w `docs`, migracje, queue, storage. | Brak supervisor/systemd config, backup planu, observability, HTTPS/domeny. |
 | Integracje zewnetrzne | Brak | Standardowa konfiguracja mail/log/storage/queue. | Brak integracji z ClickUp/CRM/email/S3/SSO/M365 Graph. |

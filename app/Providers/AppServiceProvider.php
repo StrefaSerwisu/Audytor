@@ -17,8 +17,12 @@ use App\Policies\AuditPolicy;
 use App\Policies\AuditPublicationPolicy;
 use App\Policies\AuditReportExportPolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,5 +48,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
 
         User::observe(UserObserver::class);
+
+        RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(5)->by(
+            Str::lower((string) $request->input('email')).'|'.$request->ip(),
+        ));
     }
 }

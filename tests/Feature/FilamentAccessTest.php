@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Client;
 use App\Models\User;
 use Filament\Panel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,7 +28,12 @@ class FilamentAccessTest extends TestCase
         $panel = Panel::make()->id('admin');
         $sales = User::factory()->create(['role' => 'sales', 'active' => true]);
         $auditor = User::factory()->create(['role' => 'auditor', 'active' => true]);
-        $client = User::factory()->create(['role' => 'client', 'active' => true]);
+        $clientAccount = Client::create(['name' => 'Klient testowy']);
+        $client = User::factory()->create([
+            'role' => 'client',
+            'client_id' => $clientAccount->id,
+            'active' => true,
+        ]);
         $inactiveAdmin = User::factory()->create(['role' => 'global_admin', 'active' => false]);
 
         $this->assertFalse($sales->canAccessPanel($panel));

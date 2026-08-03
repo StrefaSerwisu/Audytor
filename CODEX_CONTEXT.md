@@ -127,6 +127,7 @@ Ostatnio dokumentacja z lipca wskazywala przechodzace testy feature. Przy wznowi
 - Offline nie jest pelnym syncem; IndexedDB trzyma drafty, ale nie ma pelnej automatycznej wysylki do backendu.
 - Etap 1A dodal Enum rol, middleware i Policies dla kluczowych modeli.
 - Etap 1B dodal CRUD uzytkownikow w Filament, centralny `AuditLog` i Form Requests dla kluczowych akcji.
+- Logowanie audytora i klienta jest ograniczone wspolnym limiterem `login`: 5 prob/min dla e-mail + IP.
 - Brak E2E/browser tests.
 - Brak realnych integracji zewnetrznych.
 - `docs/architecture.md` zawiera starsza wzmianke o Inertia/Vue jako docelowym stacku, ale realny projekt uzywa Blade/Filament.

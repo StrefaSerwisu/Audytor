@@ -6,7 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Requests\UpdateFollowUpTaskRequest;
 use App\Models\AuditFollowUpTask;
 use App\Models\User;
-use App\Support\AuditTrail;
+use App\Support\AuditLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -105,7 +105,7 @@ class FollowUpTaskController extends Controller
             'client_visible' => (bool) ($validated['client_visible'] ?? false),
         ]);
 
-        AuditTrail::record(
+        AuditLogService::record(
             'follow_up.updated',
             $task,
             oldValues: $oldValues,

@@ -5,8 +5,9 @@ namespace App\Support;
 use App\Models\AuditLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
-class AuditTrail
+class AuditLogService
 {
     /**
      * @param  array<string, mixed>  $oldValues
@@ -41,11 +42,20 @@ class AuditTrail
      */
     private static function sanitize(array $values): array
     {
-        $sensitiveKeys = ['password', 'remember_token', 'token', 'secret'];
+        $sensitiveFragments = [
+            'password',
+            'secret',
+            'token',
+            'authorization',
+            'cookie',
+            'api_key',
+            'private_key',
+            'remember_token',
+        ];
 
         return collect($values)
-            ->mapWithKeys(function (mixed $value, string|int $key) use ($sensitiveKeys): array {
-                if (in_array(strtolower((string) $key), $sensitiveKeys, true)) {
+            ->mapWithKeys(function (mixed $value, string|int $key) use ($sensitiveFragments): array {
+                if (Str::contains(Str::lower((string) $key), $sensitiveFragments)) {
                     return [$key => '[REDACTED]'];
                 }
 

@@ -7,8 +7,8 @@ use App\Http\Requests\RequestAuditChangesRequest;
 use App\Models\Audit;
 use App\Models\AuditAnswer;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\AuditNotifier;
-use App\Support\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -84,7 +84,7 @@ class TechnicalReviewController extends Controller
             'approved_at' => now(),
         ])->save();
 
-        AuditTrail::record(
+        AuditLogService::record(
             'audit.technically_approved',
             $audit,
             oldValues: ['status' => $oldStatus],
@@ -127,7 +127,7 @@ class TechnicalReviewController extends Controller
             'approved_at' => null,
         ])->save();
 
-        AuditTrail::record(
+        AuditLogService::record(
             'audit.changes_requested',
             $audit,
             oldValues: ['status' => $oldStatus],

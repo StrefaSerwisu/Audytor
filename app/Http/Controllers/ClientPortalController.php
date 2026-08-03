@@ -9,7 +9,7 @@ use App\Models\AuditAnswer;
 use App\Models\AuditPublication;
 use App\Models\AuditQuestion;
 use App\Models\User;
-use App\Support\AuditTrail;
+use App\Support\AuditLogService;
 use App\Support\FollowUpTaskBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -92,7 +92,7 @@ class ClientPortalController extends Controller
             'client_status_updated_at' => now(),
         ])->save();
 
-        AuditTrail::record(
+        AuditLogService::record(
             'client_report.status_updated',
             $publication,
             oldValues: ['client_status' => $oldStatus],
@@ -118,7 +118,7 @@ class ClientPortalController extends Controller
             'client_feedback_at' => now(),
         ])->save();
 
-        AuditTrail::record(
+        AuditLogService::record(
             'client_report.feedback_updated',
             $publication,
             oldValues: $oldValues,

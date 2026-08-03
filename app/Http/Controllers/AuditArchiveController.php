@@ -6,8 +6,8 @@ use App\Http\Requests\CloseAuditRequest;
 use App\Models\Audit;
 use App\Models\AuditAnswer;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\AuditNotifier;
-use App\Support\AuditTrail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -122,7 +122,7 @@ class AuditArchiveController extends Controller
             'completed_at' => now(),
         ])->save();
 
-        AuditTrail::record(
+        AuditLogService::record(
             'audit.closed',
             $audit,
             oldValues: ['status' => $oldStatus],

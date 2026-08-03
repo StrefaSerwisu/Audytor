@@ -79,6 +79,10 @@ class AuditLogResource extends Resource
                     'follow_up.updated' => 'Zmiana follow-up',
                     'client_report.status_updated' => 'Decyzja klienta',
                     'client_report.feedback_updated' => 'Komentarz klienta',
+                    'auth.login_succeeded' => 'Udane logowanie',
+                    'auth.login_failed' => 'Nieudane logowanie',
+                    'auth.login_denied' => 'Odrzucone logowanie',
+                    'auth.logout' => 'Wylogowanie',
                 ]),
             ]);
     }

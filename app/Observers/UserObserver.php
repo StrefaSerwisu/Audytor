@@ -4,9 +4,10 @@ namespace App\Observers;
 
 use App\Enums\UserRole;
 use App\Models\User;
-use App\Support\AuditTrail;
+use App\Support\AuditLogService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class UserObserver
 {
@@ -44,11 +45,17 @@ class UserObserver
         if ($user->role !== UserRole::Client) {
             $user->client_id = null;
         }
+
+        if ($user->role === UserRole::Client && ! $user->client_id) {
+            throw ValidationException::withMessages([
+                'client_id' => 'Konto klienta musi byc przypisane do klienta.',
+            ]);
+        }
     }
 
     public function created(User $user): void
     {
-        AuditTrail::record('user.created', $user, newValues: $this->snapshot($user));
+        AuditLogService::record('user.created', $user, newValues: $this->snapshot($user));
     }
 
     public function updated(User $user): void
@@ -59,7 +66,7 @@ class UserObserver
             return;
         }
 
-        AuditTrail::record(
+        AuditLogService::record(
             'user.updated',
             $user,
             oldValues: collect($changedFields)->mapWithKeys(fn (string $field): array => [
@@ -80,7 +87,7 @@ class UserObserver
 
     public function deleted(User $user): void
     {
-        AuditTrail::record('user.deleted', $user, oldValues: $this->snapshot($user));
+        AuditLogService::record('user.deleted', $user, oldValues: $this->snapshot($user));
     }
 
     /** @return array<string, mixed> */

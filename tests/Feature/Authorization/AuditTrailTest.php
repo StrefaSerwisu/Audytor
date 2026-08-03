@@ -7,6 +7,7 @@ use App\Models\AuditAnswer;
 use App\Models\AuditAnswerAttachment;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\AuditLogService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -76,5 +77,23 @@ class AuditTrailTest extends TestCase
         $this->assertSame($auditor->id, $deletedLog->actor_id);
         $this->assertSame('test.txt', $deletedLog->old_values['original_name']);
         $this->assertDatabaseMissing('audit_answer_attachments', ['id' => $attachment->id]);
+    }
+
+    public function test_passwords_tokens_and_nested_secrets_are_redacted(): void
+    {
+        $log = AuditLogService::record('security.redaction_test', metadata: [
+            'password' => 'plain-password',
+            'api_token' => 'plain-token',
+            'nested' => [
+                'client_secret' => 'plain-secret',
+                'safe_value' => 'visible',
+            ],
+        ]);
+
+        $this->assertSame('[REDACTED]', $log->metadata['password']);
+        $this->assertSame('[REDACTED]', $log->metadata['api_token']);
+        $this->assertSame('[REDACTED]', $log->metadata['nested']['client_secret']);
+        $this->assertSame('visible', $log->metadata['nested']['safe_value']);
+        $this->assertStringNotContainsString('plain-', json_encode($log->metadata));
     }
 }

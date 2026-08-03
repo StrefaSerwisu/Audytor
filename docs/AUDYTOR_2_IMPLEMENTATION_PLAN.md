@@ -864,7 +864,7 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
    - przypisanie klienta jest automatycznie czyszczone dla rol wewnetrznych.
 4. Dodano centralny audit trail:
    - migracja i model `AuditLog`,
-   - usluga `AuditTrail`,
+   - usluga `AuditLogService`,
    - aktor, zdarzenie, obiekt, stare i nowe wartosci, metadane, IP, user agent i data,
    - filtrowany, tylko do odczytu `AuditLogResource` w Filament,
    - automatyczny audit zmian uzytkownikow przez `UserObserver`,
@@ -877,6 +877,7 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
    - zamkniecie audytu,
    - zmiana follow-upu,
    - status i feedback klienta.
+   - udane, nieudane i odrzucone logowanie oraz wylogowanie.
 6. Dodano Form Requests dla kluczowych operacji zapisu:
    - logowanie,
    - zapis odpowiedzi audytora i zalacznikow,
@@ -886,7 +887,11 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
    - aktualizacja follow-upu,
    - status i feedback klienta.
 7. Dodano testy dostepu, zabezpieczen kont oraz audit trailu dowodow i workflow.
-8. Recznie sprawdzono w Filament:
+8. Dodano rate limiting logowania audytora i klienta:
+   - 5 prob na minute,
+   - klucz limitu: znormalizowany e-mail + adres IP,
+   - odpowiedz `429` po przekroczeniu limitu.
+9. Recznie sprawdzono w Filament:
    - menu `Bezpieczenstwo`,
    - liste i formularz uzytkownikow,
    - dziennik zdarzen,
@@ -896,11 +901,13 @@ Etap 1B obejmuje zarzadzanie uzytkownikami, centralny audit trail i wydzielenie 
 
 | Komenda | Wynik |
 | --- | --- |
-| `php artisan test` | PASS: 88 testow, 394 asercje |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, wszystkie migracje i seeder |
+| `php artisan test` | PASS: 94 testy, 420 asercji |
 | `./vendor/bin/pint --test` | PASS |
 | `composer validate` | PASS: `composer.json is valid` |
-| `php artisan migrate:status` | PASS: wszystkie migracje `Ran`, `audit_logs` w batchu 9 |
+| `php artisan migrate:status` | PASS: wszystkie migracje `Ran` |
 | `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list` | PASS: 66 tras |
 
 ### Ograniczenia i dalszy zakres Etapu 1
 

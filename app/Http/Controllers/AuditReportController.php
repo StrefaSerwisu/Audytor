@@ -10,9 +10,9 @@ use App\Models\AuditAnswer;
 use App\Models\AuditQuestion;
 use App\Models\Recommendation;
 use App\Models\User;
+use App\Support\AuditLogService;
 use App\Support\AuditNotifier;
 use App\Support\AuditReportData;
-use App\Support\AuditTrail;
 use App\Support\SimpleDocx;
 use App\Support\SimplePdf;
 use Illuminate\Http\RedirectResponse;
@@ -112,7 +112,7 @@ class AuditReportController extends Controller
             'status' => 'published_to_client',
         ])->save();
 
-        AuditTrail::record(
+        AuditLogService::record(
             'report.published',
             $publication,
             oldValues: ['audit_status' => $oldStatus],
@@ -163,7 +163,7 @@ class AuditReportController extends Controller
             'status' => 'queued',
         ]);
 
-        AuditTrail::record('report_export.queued', $export, newValues: [
+        AuditLogService::record('report_export.queued', $export, newValues: [
             'audit_id' => $audit->id,
             'report_type' => $type,
             'format' => $validated['format'],
@@ -222,7 +222,7 @@ class AuditReportController extends Controller
             ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             : 'application/pdf';
 
-        AuditTrail::record('report.downloaded', $audit, metadata: [
+        AuditLogService::record('report.downloaded', $audit, metadata: [
             'report_type' => $type,
             'format' => $format,
         ]);

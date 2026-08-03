@@ -31,7 +31,8 @@ Projekt jest monolitem Laravel:
 - Job `GenerateAuditReportExport` generuje pliki raportow w tle.
 - Policies i middleware rol centralizuja autoryzacje.
 - Form Requests trzymaja walidacje kluczowych akcji zapisu.
-- `AuditTrail` i `audit_logs` tworza centralny dziennik zmian i operacji.
+- `AuditLogService` i `audit_logs` tworza centralny dziennik zmian i operacji.
+- Wspolny limiter `login` ogranicza formularze audytora i klienta do 5 prob na minute dla kombinacji e-mail + IP.
 
 Nie ma oddzielnego API ani SPA. Mimo starej notatki w `docs/architecture.md`, projekt aktualnie nie uzywa Inertia ani Vue.
 
@@ -76,7 +77,7 @@ Projekt jest funkcjonalnym MVP z domknietymi fundamentami rol, zarzadzania konta
 - `app/Support/AuditReportData.php` - dane tekstowe do PDF/DOCX.
 - `app/Support/SimplePdf.php` i `app/Support/SimpleDocx.php` - minimalne generatory plikow.
 - `app/Support/FollowUpTaskBuilder.php` - tworzenie zadan follow-up z zaakceptowanych rekomendacji.
-- `app/Support/AuditTrail.php` - centralny zapis zdarzen wraz z aktorem, obiektem, zmianami, IP i user agentem.
+- `app/Support/AuditLogService.php` - centralny zapis zdarzen wraz z aktorem, obiektem, zmianami, IP i user agentem oraz redakcja sekretow.
 - `app/Observers/UserObserver.php` - audit zmian kont oraz zabezpieczenia roli Super Admin i wlasnego konta.
 - `database/seeders/DatabaseSeeder.php` - konta testowe, klient testowy, moduly, pytania, rekomendacje, audyt testowy.
 - `public/service-worker.js` i `public/offline-audit.js` - PWA/offline.
