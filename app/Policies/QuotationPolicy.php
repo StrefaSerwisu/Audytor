@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\QuotationStatus;
 use App\Enums\UserRole;
 use App\Models\Quotation;
 use App\Models\SalesQualification;
@@ -64,5 +65,13 @@ class QuotationPolicy
     public function cancel(User $user, Quotation $quotation): bool
     {
         return $this->sendToClient($user, $quotation);
+    }
+
+    public function createAuditOrder(User $user, Quotation $quotation): bool
+    {
+        return $this->view($user, $quotation)
+            && $user->hasAnyRole(UserRole::Sales, UserRole::GlobalAdmin, UserRole::SuperAdmin)
+            && $quotation->status === QuotationStatus::Accepted
+            && $quotation->is_current;
     }
 }

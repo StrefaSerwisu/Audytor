@@ -20,6 +20,12 @@
     @if(session('status'))<div class="notice" style="margin-bottom:16px;">{{ session('status') }}</div>@endif
     @if($errors->any())<div class="error" style="margin-bottom:16px;">{{ $errors->first() }}</div>@endif
 
+    @if($quotation->auditOrder)
+        <div class="notice" style="margin-bottom:16px;">Utworzono zlecenie <a href="{{ route('delivery.audit-orders.show', $quotation->auditOrder) }}"><strong>{{ $quotation->auditOrder->number }}</strong></a>.</div>
+    @elseif(auth()->user()->can('createAuditOrder', $quotation))
+        <form method="post" action="{{ route('sales.quotations.audit-order.store', $quotation) }}" style="margin-bottom:16px;">@csrf<button type="submit">Utworz zlecenie audytu</button></form>
+    @endif
+
     <section class="card" style="margin-bottom:18px;">
         <div class="grid">
             <div><strong>Kwalifikacja</strong><div><a href="{{ route('sales.qualifications.show', $quotation->qualification) }}">#{{ $quotation->qualification->id }} {{ $quotation->qualification->title }}</a></div></div>

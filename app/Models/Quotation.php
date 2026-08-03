@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Quotation extends Model
@@ -90,6 +91,11 @@ class Quotation extends Model
     public function overrides(): HasMany
     {
         return $this->hasMany(QuotationOverride::class)->latest('created_at');
+    }
+
+    public function auditOrder(): HasOne
+    {
+        return $this->hasOne(AuditOrder::class);
     }
 
     public function auditLogs(): MorphMany

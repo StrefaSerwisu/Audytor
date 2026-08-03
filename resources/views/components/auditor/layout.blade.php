@@ -401,6 +401,9 @@
                         <a class="button secondary" href="{{ route('sales.quotations.index') }}">Wyceny</a>
                         <a class="button secondary" href="{{ route('follow-ups.index') }}">Follow-up</a>
                     @endif
+                    @if (auth()->user()->active && auth()->user()->hasAnyRole(\App\Enums\UserRole::SuperAdmin, \App\Enums\UserRole::GlobalAdmin, \App\Enums\UserRole::TechnicalLead, \App\Enums\UserRole::Auditor, \App\Enums\UserRole::Sales))
+                        <a class="button secondary" href="{{ route('delivery.audit-orders.index') }}">Zlecenia</a>
+                    @endif
                 @endauth
                 <div id="network" class="network">
                     <span class="network-dot"></span>

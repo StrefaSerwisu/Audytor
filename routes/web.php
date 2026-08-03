@@ -5,6 +5,7 @@ use App\Http\Controllers\AuditDashboardController;
 use App\Http\Controllers\AuditNotificationController;
 use App\Http\Controllers\AuditorAuditController;
 use App\Http\Controllers\AuditorAuthController;
+use App\Http\Controllers\AuditOrderController;
 use App\Http\Controllers\AuditReportController;
 use App\Http\Controllers\ClientPortalAuthController;
 use App\Http\Controllers\ClientPortalController;
@@ -144,6 +145,22 @@ Route::middleware('auth')->prefix('sales/quotations')->name('sales.quotations.')
         Route::post('/{quotation}/reject', [QuotationController::class, 'reject'])->name('reject');
         Route::post('/{quotation}/expire', [QuotationController::class, 'expire'])->name('expire');
         Route::post('/{quotation}/cancel', [QuotationController::class, 'cancel'])->name('cancel');
+        Route::post('/{quotation}/audit-order', [AuditOrderController::class, 'store'])->name('audit-order.store');
+    });
+
+Route::middleware('auth')->prefix('delivery/audit-orders')->name('delivery.audit-orders.')
+    ->middleware('role:sales,auditor,technical_lead,global_admin,super_admin')
+    ->group(function () {
+        Route::get('/', [AuditOrderController::class, 'index'])->name('index');
+        Route::get('/{auditOrder}', [AuditOrderController::class, 'show'])->name('show');
+        Route::patch('/{auditOrder}/plan', [AuditOrderController::class, 'updatePlan'])->name('plan');
+        Route::post('/{auditOrder}/assignees', [AuditOrderController::class, 'assign'])->name('assignees.store');
+        Route::delete('/{auditOrder}/assignees/{assignee}', [AuditOrderController::class, 'unassign'])->name('assignees.destroy');
+        Route::patch('/{auditOrder}/preparation/{item}', [AuditOrderController::class, 'updatePreparation'])->name('preparation.update');
+        Route::post('/{auditOrder}/documents', [AuditOrderController::class, 'uploadDocument'])->name('documents.store');
+        Route::get('/{auditOrder}/documents/{document}', [AuditOrderController::class, 'downloadDocument'])->name('documents.download');
+        Route::delete('/{auditOrder}/documents/{document}', [AuditOrderController::class, 'deleteDocument'])->name('documents.destroy');
+        Route::post('/{auditOrder}/status/{status}', [AuditOrderController::class, 'transition'])->name('transition');
     });
 
 Route::middleware('auth')->prefix('client/portal')->name('client.portal.')

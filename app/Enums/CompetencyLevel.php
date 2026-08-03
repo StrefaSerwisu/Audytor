@@ -28,4 +28,17 @@ enum CompetencyLevel: string
             ->mapWithKeys(fn (self $level): array => [$level->value => $level->label()])
             ->all();
     }
+
+    public function meets(self $required): bool
+    {
+        return $this->rank() >= $required->rank();
+    }
+
+    private function rank(): int
+    {
+        return match ($this) {
+            self::Junior => 1, self::Regular => 2, self::Senior => 3,
+            self::Specialist => 4, self::TechnicalLead => 5,
+        };
+    }
 }

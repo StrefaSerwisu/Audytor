@@ -7,6 +7,10 @@ use App\Models\AuditAnswerAttachment;
 use App\Models\AuditControlDefinition;
 use App\Models\AuditFollowUpTask;
 use App\Models\AuditLog;
+use App\Models\AuditOrder;
+use App\Models\AuditOrderAssignee;
+use App\Models\AuditOrderDocument;
+use App\Models\AuditPreparationItem;
 use App\Models\AuditPublication;
 use App\Models\AuditReportExport;
 use App\Models\AuditType;
@@ -24,7 +28,11 @@ use App\Policies\AuditAnswerAttachmentPolicy;
 use App\Policies\AuditControlDefinitionPolicy;
 use App\Policies\AuditFollowUpTaskPolicy;
 use App\Policies\AuditLogPolicy;
+use App\Policies\AuditOrderAssigneePolicy;
+use App\Policies\AuditOrderDocumentPolicy;
+use App\Policies\AuditOrderPolicy;
 use App\Policies\AuditPolicy;
+use App\Policies\AuditPreparationItemPolicy;
 use App\Policies\AuditPublicationPolicy;
 use App\Policies\AuditReportExportPolicy;
 use App\Policies\AuditTypeModulePolicy;
@@ -59,6 +67,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Audit::class, AuditPolicy::class);
+        Gate::policy(AuditOrder::class, AuditOrderPolicy::class);
+        Gate::policy(AuditOrderAssignee::class, AuditOrderAssigneePolicy::class);
+        Gate::policy(AuditPreparationItem::class, AuditPreparationItemPolicy::class);
+        Gate::policy(AuditOrderDocument::class, AuditOrderDocumentPolicy::class);
         Gate::policy(AuditAnswerAttachment::class, AuditAnswerAttachmentPolicy::class);
         Gate::policy(AuditReportExport::class, AuditReportExportPolicy::class);
         Gate::policy(AuditPublication::class, AuditPublicationPolicy::class);

@@ -18,6 +18,7 @@ class UserObserver
         'client_id',
         'mfa_enabled',
         'active',
+        'competency_level',
     ];
 
     public function saving(User $user): void
@@ -44,6 +45,10 @@ class UserObserver
 
         if ($user->role !== UserRole::Client) {
             $user->client_id = null;
+        }
+
+        if (! in_array($user->role, [UserRole::Auditor, UserRole::TechnicalLead], true)) {
+            $user->competency_level = null;
         }
 
         if ($user->role === UserRole::Client && ! $user->client_id) {

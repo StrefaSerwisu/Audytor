@@ -68,7 +68,7 @@ class QuotationController extends Controller
     public function show(Request $request, Quotation $quotation): View
     {
         abort_unless($request->user()?->can('view', $quotation), 403);
-        $quotation->load(['client', 'auditType', 'versionDefinition', 'salesOwner', 'qualification', 'lines', 'overrides.user', 'auditLogs.actor']);
+        $quotation->load(['client', 'auditType', 'versionDefinition', 'salesOwner', 'qualification', 'lines', 'overrides.user', 'auditLogs.actor', 'auditOrder']);
 
         return view('sales.quotations.show', [
             'quotation' => $quotation,

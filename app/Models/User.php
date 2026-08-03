@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\CompetencyLevel;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
@@ -32,6 +33,7 @@ class User extends Authenticatable implements FilamentUser
         'client_id',
         'mfa_enabled',
         'active',
+        'competency_level',
     ];
 
     /**
@@ -57,6 +59,7 @@ class User extends Authenticatable implements FilamentUser
             'role' => UserRole::class,
             'mfa_enabled' => 'boolean',
             'active' => 'boolean',
+            'competency_level' => CompetencyLevel::class,
         ];
     }
 
@@ -191,6 +194,26 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(QuotationOverride::class);
     }
 
+    public function auditOrderAssignments(): HasMany
+    {
+        return $this->hasMany(AuditOrderAssignee::class);
+    }
+
+    public function ownedAuditOrders(): HasMany
+    {
+        return $this->hasMany(AuditOrder::class, 'delivery_owner_id');
+    }
+
+    public function ledAuditOrders(): HasMany
+    {
+        return $this->hasMany(AuditOrder::class, 'technical_lead_id');
+    }
+
+    public function createdAuditOrders(): HasMany
+    {
+        return $this->hasMany(AuditOrder::class, 'created_by');
+    }
+
     public function calculatedQuotations(): HasMany
     {
         return $this->hasMany(Quotation::class, 'calculated_by');
@@ -231,6 +254,7 @@ class User extends Authenticatable implements FilamentUser
             'calculatedQuotations',
             'approvedQuotations',
             'sentQuotations',
+            'auditOrderAssignments', 'ownedAuditOrders', 'ledAuditOrders', 'createdAuditOrders',
         ])->contains(fn (string $relation): bool => $this->{$relation}()->exists());
     }
 }

@@ -1135,3 +1135,59 @@ Seeder tworzy demonstracyjny typ `AUD-DEMO-2C` z regułami: 4 h bazowe, 0,15 h n
 | `composer validate` | PASS: `composer.json is valid` |
 | `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
 | `php artisan route:list --path=sales/quotations` | PASS: 11 tras wycen |
+
+## 24. Etap 2D - zlecenie audytu i planowanie Delivery
+
+Data wykonania: 2026-08-03
+
+Branch: `codex/etap-1b-security-foundation`
+
+Etap 2D wprowadza operacyjne zlecenie audytu tworzone z aktualnej, zaakceptowanej wyceny. Zlecenie zamraza dane z kwalifikacji, finalna wycene oraz konkretna wersje konfiguracji technicznej, ale celowo nie tworzy jeszcze instancji technicznego modelu `Audit`.
+
+### Dane i snapshot
+
+- `AuditOrder` ma transakcyjnie bezpieczny numer `AUD-ZL/RRRR/NNNN`, unikalne powiazanie z wycena, klienta, lokalizacje, wersje typu audytu, plan godzin i terminow oraz wlascicieli Sales i Delivery.
+- `source_snapshot` przechowuje kwalifikacje, odpowiedzi, zaakceptowana wycene, pozycje kalkulacji i historie korekt.
+- `configuration_snapshot` pochodzi z dokladnie tej `AuditTypeVersion`, ktora byla podstawa zaakceptowanej wyceny. Obejmuje parametry, moduly techniczne, kontrole, instrukcje Delivery, kompetencje, czasy i konfiguracje AI, ale nie uruchamia AI.
+- Jedna wycena moze utworzyc tylko jedno zlecenie. Operacja sprawdza status `accepted`, flage `is_current`, uprawnienia i blokuje rekord wyceny w transakcji.
+- Utworzenie zlecenia nie tworzy rekordu w tabeli `audits`; nastapi to dopiero w Etapie 3A.
+
+### Planowanie Delivery
+
+- `AuditOrderAssignee` obsluguje role: wlasciciel Delivery, lider techniczny, audytor, inzynier wspierajacy i obserwator. Przechowuje planowane godziny oraz snapshot kompetencji.
+- `CompetencyLevel::meets()` porownuje poziomy Junior, Regular, Senior, Specjalista i Lider techniczny. Poziom mozna ustawic tylko dla roli Auditor albo Technical Lead; przypisanie ponizej minimum generuje ostrzezenie i pozostaje widocznym blokerem.
+- Kazde zlecenie otrzymuje 12 wymaganych pozycji checklisty dotyczacych zakresu, zespolu, terminu, dostepow, dokumentow, narzedzi i kontaktu z klientem.
+- Dokumenty kwalifikacji sa referencjami do istniejacych prywatnych plikow, bez kopiowania. Delivery moze dodac wlasne dokumenty do 20 MB; pobieranie i usuwanie chronia Policies oraz kontrola przynaleznosci rekordu.
+
+### Statusy i gotowosc
+
+`AuditOrderStatus` definiuje `draft`, `awaiting_planning`, `planning`, `awaiting_access`, `ready`, `scheduled`, `in_progress` i `cancelled`. `AuditOrderWorkflowService` jest jedynym miejscem przejsc statusow. Etap 2D konczy sie na `in_progress`.
+
+Przejscie do `ready` albo `scheduled` wymaga wlasciciela Delivery, lidera technicznego, audytora lub inzyniera wspierajacego, terminu, dodatnich planowanych godzin, zakonczonej wymaganej checklisty oraz przynajmniej jednej osoby spelniajacej minimalny poziom kompetencji. Anulowanie wymaga powodu, a historyczny termin planowania wymaga uzasadnienia.
+
+### Uprawnienia, audit trail i powiadomienia
+
+- Technical Lead, Global Admin i Super Admin planuja zespol, checklisty, dokumenty i statusy.
+- Auditor widzi tylko zlecenia, do ktorych jest przypisany, bez prawa planowania.
+- Sales widzi status i szczegoly tylko swoich zlecen oraz moze utworzyc zlecenie ze swojej zaakceptowanej wyceny.
+- Client nie ma dostepu do modulu Delivery.
+- Audit log obejmuje utworzenie i snapshot zlecenia, planowanie, zmiane terminu, przypisania, checklisty, dokumenty i zmiany statusu.
+- Istniejacy system `AuditNotification` zostal rozszerzony o opcjonalne `audit_order_id`. Powiadamia przypisana osobe, Sales po gotowosci i zmianie terminu oraz liderow o blokerach.
+
+### Ograniczenia Etapu 2D
+
+- Brak utworzenia technicznego `Audit`, kopiowania kontroli do realizacji i mapowania odpowiedzi; to zakres Etapu 3A.
+- Brak integracji kalendarza, CRM, ClickUp, poczty i OpenAI.
+- Ostrzezenie o niedostatecznej kompetencji nie blokuje samego przypisania, ale blokuje gotowosc, dopoki w zespole nie ma osoby spelniajacej minimum.
+- Pliki zrodlowe pozostaja w prywatnym storage kwalifikacji; zlecenie przechowuje kontrolowana referencje, nie druga kopie.
+
+### Wyniki walidacji Etapu 2D
+
+| Komenda | Wynik |
+| --- | --- |
+| `php artisan migrate:fresh --seed` | PASS: PostgreSQL, 44 migracje i seeder demonstracyjny |
+| `php artisan test` | PASS: 163 testy, 721 asercji; SQLite in-memory |
+| `./vendor/bin/pint --test` | PASS |
+| `composer validate` | PASS: `composer.json is valid` |
+| `npm run build` | PASS: Vite 7.3.6, 56 modules transformed |
+| `php artisan route:list --path=delivery/audit-orders` | PASS: 10 tras Delivery |

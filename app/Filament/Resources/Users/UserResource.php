@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users;
 
+use App\Enums\CompetencyLevel;
 use App\Enums\UserRole;
 use App\Filament\Resources\Users\Pages\ManageUsers;
 use App\Models\User;
@@ -84,6 +85,11 @@ class UserResource extends Resource
                             ->preload()
                             ->required(fn (Get $get): bool => $get('role') === UserRole::Client->value)
                             ->visible(fn (Get $get): bool => $get('role') === UserRole::Client->value),
+                        Select::make('competency_level')
+                            ->label('Poziom kompetencji')
+                            ->options(CompetencyLevel::options())
+                            ->required(fn (Get $get): bool => in_array($get('role'), [UserRole::Auditor->value, UserRole::TechnicalLead->value], true))
+                            ->visible(fn (Get $get): bool => in_array($get('role'), [UserRole::Auditor->value, UserRole::TechnicalLead->value], true)),
                         Toggle::make('active')
                             ->label('Konto aktywne')
                             ->default(true)
@@ -108,6 +114,7 @@ class UserResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (UserRole $state): string => $state->label()),
                 TextColumn::make('client.name')->label('Klient')->placeholder('Global IT')->sortable(),
+                TextColumn::make('competency_level')->label('Kompetencje')->formatStateUsing(fn (?CompetencyLevel $state): string => $state?->label() ?? '-'),
                 TextColumn::make('active')
                     ->label('Status')
                     ->badge()
@@ -165,6 +172,10 @@ class UserResource extends Resource
 
         if (($data['role'] ?? null) !== UserRole::Client->value) {
             $data['client_id'] = null;
+        }
+
+        if (! in_array($data['role'] ?? null, [UserRole::Auditor->value, UserRole::TechnicalLead->value], true)) {
+            $data['competency_level'] = null;
         }
 
         if (($data['role'] ?? null) === UserRole::Client->value && blank($data['client_id'] ?? null)) {
